@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { HomeRedirect, RequireAuth } from '@/app/RequireAuth';
+import { SignOutButton } from '@/app/SignOutButton';
 import { Login } from './Login';
 
 const marshal = {
@@ -28,7 +29,17 @@ function renderAt(path: string) {
             { path: '/login', element: <Login /> },
             {
                 element: <RequireAuth area="/me" />,
-                children: [{ path: '/me', element: <h1>My duties</h1> }],
+                children: [
+                    {
+                        path: '/me',
+                        element: (
+                            <>
+                                <h1>My duties</h1>
+                                <SignOutButton />
+                            </>
+                        ),
+                    },
+                ],
             },
             {
                 element: <RequireAuth area="/admin" />,
@@ -107,5 +118,18 @@ describe('login flow', () => {
         );
         renderAt('/admin');
         expect(await screen.findByRole('heading', { name: 'My duties' })).toBeInTheDocument();
+    });
+
+    it('signs out and returns to the login page', async () => {
+        const fetchMock = vi.fn((url: string) => {
+            if (url === '/api/logout') return json(204, null);
+            return json(200, { data: marshal });
+        });
+        vi.stubGlobal('fetch', fetchMock);
+        renderAt('/me');
+
+        fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+
+        expect(await screen.findByRole('button', { name: 'Sign in' })).toBeInTheDocument();
     });
 });

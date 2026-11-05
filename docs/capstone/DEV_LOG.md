@@ -49,3 +49,10 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - What was built: DemoSeeder with four fake people (admin, marshal, volunteer, coordinator), all with the password "password"
 - Decision and why: the seeder refuses to run in production, so test accounts with a known password can never reach a real server
 - Evidence: tests/Feature/Personnel/DemoSeederTest.php
+
+## 2026-11-05 · Fixes found during the owner's local check of S1.1 (core)
+- What was built: a Sign out button in both layouts, a setup script that handles a root Ubuntu user and fails loudly, and a refreshed composer.lock hash
+- Problem met and fix: on the owner's Windows PC Ubuntu defaults to root, so the Sail container could not write project files and setup.sh stopped without a clear message. The script now gives the group write access when it runs as root and prints a clear message if any step fails
+- Problem met and fix: composer validate said the lock file was out of date. Only the content hash had drifted, so it was refreshed with no package changes
+- Evidence: Login.test.tsx (sign out test), composer validate output
+- Paper: Chapter 4 (testing on a real machine), Chapter 5 (limitations: setup differs per PC)

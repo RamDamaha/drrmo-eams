@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from 'react-router';
+import { SignOutButton } from '@/app/SignOutButton';
 
 const items = [
     { to: '/admin', label: 'Dashboard' },
@@ -32,6 +33,7 @@ export function AdminLayout() {
                         </NavLink>
                     ))}
                 </nav>
+                <SignOutButton className="mt-4 block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100" />
             </aside>
             <main className="min-w-0 flex-1 p-6">
                 <Outlet />

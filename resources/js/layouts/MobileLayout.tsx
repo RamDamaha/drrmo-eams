@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from 'react-router';
+import { SignOutButton } from '@/app/SignOutButton';
 
 const tabs = [
     { to: '/me', label: 'Duties' },
@@ -11,8 +12,9 @@ const tabs = [
 export function MobileLayout() {
     return (
         <div className="mx-auto flex min-h-screen max-w-2xl flex-col bg-white">
-            <header className="sticky top-0 z-10 border-b border-gray-200 bg-white px-4 py-3">
+            <header className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-2">
                 <span className="text-lg font-semibold text-red-700">DRRMO</span>
+                <SignOutButton className="min-h-12 px-3 text-base text-gray-700" />
             </header>
             <main className="flex-1 px-4 py-4 pb-24">
                 <Outlet />
