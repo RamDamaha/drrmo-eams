@@ -18,6 +18,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
+/**
+ * @property Team|null $team
+ * @property AvailabilityStatus $status
+ */
 #[Fillable(['name', 'email', 'contact_number', 'role_id', 'department_id', 'team', 'status', 'password'])]
 #[Hidden(['password', 'remember_token'])]
 #[UseFactory(UserFactory::class)]
