@@ -1,0 +1,9 @@
+# <type>(<module>): <short summary in present tense, max 72 chars>
+#
+# Types: feat, fix, docs, refactor, test, chore, ci, perf, style
+# Modules: core, personnel, access, events, notifications, monitoring, information, records
+# Example: feat(events): block assigning inactive volunteers
+#
+# Body: what changed and why (wrap at 72). Optional.
+#
+# Footer: Closes #123. Use "BREAKING CHANGE: ..." when a contract changes.

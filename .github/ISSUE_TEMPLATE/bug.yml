@@ -1,0 +1,38 @@
+name: Bug report
+description: Something does not work as expected
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Do not paste real names, phone numbers or locations. Use made-up data.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+        2.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and browser
+      placeholder: e.g. Android 15, Chrome 156, or Windows 11 desktop, Edge
+  - type: dropdown
+    id: privacy
+    attributes:
+      label: Does this expose personal data to the wrong person?
+      options: ["No", "Yes, treat as urgent"]
+    validations:
+      required: true
