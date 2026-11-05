@@ -44,3 +44,8 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Decision and why: tests use plain Testing Library events because adding a user-event package is a separate Core change
 - Evidence: resources/js/pages/Login.test.tsx
 - Paper: Chapter 4 (login screen, add screenshot at 375 px width)
+
+## 2026-11-05 · Demo users for local testing (personnel)
+- What was built: DemoSeeder with four fake people (admin, marshal, volunteer, coordinator), all with the password "password"
+- Decision and why: the seeder refuses to run in production, so test accounts with a known password can never reach a real server
+- Evidence: tests/Feature/Personnel/DemoSeederTest.php
