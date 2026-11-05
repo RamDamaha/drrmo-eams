@@ -1,0 +1,3 @@
+# crontab -u deploy -e
+* * * * * cd /var/www/drrmo/current && php artisan schedule:run >> /dev/null 2>&1
+0 3 * * * /var/www/drrmo/current/scripts/backup-db.sh >> /var/www/drrmo/shared/backup.log 2>&1
