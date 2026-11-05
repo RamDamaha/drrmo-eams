@@ -37,3 +37,10 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Decision and why: consent is a history of rows, and the latest row decides, so withdrawal does not erase the earlier consent
 - Evidence: tests/Feature/Records, PR #52
 - Paper: Chapter 3 (data privacy handling), Chapter 4 (security results)
+
+## 2026-11-05 · S1.1 Log in and log out, screen side (core)
+- What was built: phone-friendly login page, a `useMe` hook, route guards that keep signed-out visitors on /login and send admins to /admin and everyone else to /me
+- Decision and why: the area guard compares the `home` value from /api/me instead of repeating role rules in React, so the server stays the single place that decides who goes where
+- Decision and why: tests use plain Testing Library events because adding a user-event package is a separate Core change
+- Evidence: resources/js/pages/Login.test.tsx
+- Paper: Chapter 4 (login screen, add screenshot at 375 px width)
