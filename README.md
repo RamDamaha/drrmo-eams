@@ -19,7 +19,10 @@ The DRRMO plans events, assigns Marshals and Volunteers, emails them, collects 2
 | [SECURITY_AND_PRIVACY.md](docs/SECURITY_AND_PRIVACY.md) | Permission matrix, Data Privacy Act checklist |
 | [BACKLOG.md](docs/BACKLOG.md) | Epics and stories by milestone |
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Server setup, deploy, backup, rollback |
+| [DOCUMENTATION_GUIDE.md](docs/DOCUMENTATION_GUIDE.md) | Code docs and the capstone paper (chapters, dev log, figures) |
+| [WORKFLOWS.md](docs/WORKFLOWS.md) | Checklists: new module, table, endpoint, permission, job, screen |
 | [WORKING_WITH_CLAUDE_CODE.md](docs/WORKING_WITH_CLAUDE_CODE.md) | One session per module |
+| [PLANNING_SUMMARY.md](docs/PLANNING_SUMMARY.md) | One-page summary and current status |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Branches, commits, Definition of Done |
 
 ## Local setup on Windows (default: Laravel Sail)

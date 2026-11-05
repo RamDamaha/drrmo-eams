@@ -1,6 +1,6 @@
 # Working with Claude Code
 
-The modules are designed so several Claude Code sessions (or people) can work at the same time without stepping on each other. The rule of thumb: **one session, one module, one branch.**
+The modules are designed so several Claude Code sessions (or people) can work at the same time without stepping on each other. The rule of thumb: **one session, one module, one branch.** Step-by-step checklists (new module, table, endpoint, permission, job, screen) are in [WORKFLOWS.md](WORKFLOWS.md).
 
 ## 1. Before any parallel work
 
