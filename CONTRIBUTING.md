@@ -61,7 +61,7 @@ A story is done when all of these are true:
 5. No secrets, no real personal data, no `.env` file in the change.
 6. Non-admin screens work at 360 px phone width without sideways scrolling.
 7. The change stays inside its module, or shared files are changed in a separate `core` PR.
-8. Docs are updated when behaviour, endpoints or tables change.
+8. Docs are updated when behaviour, endpoints or tables change, and the story has a DEV_LOG entry (docs/DOCUMENTATION_GUIDE.md).
 9. The PR template checklist is complete.
 
 ## Module ownership

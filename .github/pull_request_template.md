@@ -26,3 +26,4 @@
 - [ ] Non-admin screens work at 360 px width without sideways scrolling
 - [ ] Only this module's tables and folders changed, or the shared change is labelled `core`
 - [ ] Docs updated (MODULES.md, DATABASE.md, USER_FLOWS.md) if behaviour or contracts changed
+- [ ] DEV_LOG entry added and screenshots saved for the capstone paper (docs/DOCUMENTATION_GUIDE.md)

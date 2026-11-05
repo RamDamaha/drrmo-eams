@@ -2,7 +2,7 @@
 
 Step-by-step checklists for the things we do often. Use them as is. If a step does not apply, skip it and say why in the PR.
 
-Related: [CONTRIBUTING.md](../CONTRIBUTING.md) (branches, commits, Definition of Done), [WORKING_WITH_CLAUDE_CODE.md](WORKING_WITH_CLAUDE_CODE.md) (parallel sessions), [MODULES.md](MODULES.md) (who owns what).
+Related: [DOCUMENTATION_GUIDE.md](DOCUMENTATION_GUIDE.md) (code docs and the capstone paper), [CONTRIBUTING.md](../CONTRIBUTING.md) (branches, commits, Definition of Done), [WORKING_WITH_CLAUDE_CODE.md](WORKING_WITH_CLAUDE_CODE.md) (parallel sessions), [MODULES.md](MODULES.md) (who owns what).
 
 ---
 
@@ -18,8 +18,9 @@ Related: [CONTRIBUTING.md](../CONTRIBUTING.md) (branches, commits, Definition of
 1. `composer check`, `npm run check`, `npm run build` all pass.
 2. Walk through the Definition of Done in CONTRIBUTING.md.
 3. Update the docs listed in the story's checklist below (endpoint, table, permission, screen).
-4. Open a PR using the template. Title in Conventional Commits form, for example `feat(events): block assigning inactive volunteers`. Add the module label, device label and milestone.
-5. Squash merge after CI is green. Close the issue.
+4. Add a DEV_LOG entry and any screenshots, following [DOCUMENTATION_GUIDE.md](DOCUMENTATION_GUIDE.md) section 4.
+5. Open a PR using the template. Title in Conventional Commits form, for example `feat(events): block assigning inactive volunteers`. Add the module label, device label and milestone.
+6. Squash merge after CI is green. Close the issue.
 
 ---
 
@@ -110,3 +111,9 @@ Do this only when the work does not fit any of the seven modules. Most new featu
 - [ ] Back up the database (`scripts/backup-db.sh`).
 - [ ] Deploy and run the smoke test in DEPLOYMENT.md.
 - [ ] If something is wrong: `scripts/rollback.sh`, then restore the backup if a migration caused it.
+
+## 11. Close a milestone
+
+- [ ] All stories merged and their issues closed.
+- [ ] Milestone documentation checklist done (DOCUMENTATION_GUIDE.md section 7).
+- [ ] Demo works on a real phone over HTTPS.
