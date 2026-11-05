@@ -42,7 +42,7 @@
         "react": "^19.3.1",
         "react-dom": "^19.3.1",
         "react-leaflet": "^5.0.0",
-        "react-router": "^7.18.5"
+        "react-router": "^8.5.1"
     },
     "optionalDependencies": {
         "@laravel/multiplex": "^0.4.1"
