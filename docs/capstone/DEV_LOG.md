@@ -123,3 +123,11 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Decision and why: Sanctum was removed because nothing else used it. Policies, gates and the permission matrix did not change
 - Evidence: tests/Feature/Core/JwtAuthTest.php (cookies, refresh, reuse, logout, forged and alg none tokens, disabled accounts, origin check), resources/js/shared/api/client.test.ts
 - Paper: Chapter 3 (authentication design and its trade offs), Chapter 4 (security tests)
+
+## 2026-11-06 · Sign out confirmation (core)
+- What was built: a shared `ConfirmDialog` (native dialog, centered on desktop, bottom sheet on phones) and the "Sign out?" step in `SignOutButton`
+- Decision and why: only the dialog's own Sign out button calls logout, so a stray tap on the header link can no longer end a session. Cancel gets focus first because it is the safe choice
+- Decision and why: the confirm button stays maroon, not red, because signing out does not destroy anything
+- Problem met and fix: jsdom has no `showModal`, so the test setup adds a small stand-in that only toggles the open state
+- Evidence: resources/js/app/signOut.test.tsx, resources/js/pages/Login.test.tsx
+- Paper: Chapter 3 (user interface design), Chapter 4 (usability)

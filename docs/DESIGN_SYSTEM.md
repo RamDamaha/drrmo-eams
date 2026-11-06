@@ -175,6 +175,16 @@ All in `resources/js/shared/ui`. Add a new shared piece only when two screens ne
 - Tones: `error`, `warning`, `success`, `info`. Errors use `role="alert"` so screen readers read them right away.
 - Place it right above the button that caused it.
 
+**Confirm dialog** (`ConfirmDialog.tsx`)
+- Use it before an action that is hard to undo or easy to hit by mistake, such as signing out. Do not use it for routine saves.
+- A native `<dialog>` with `role="alertdialog"`. Centered at 640 px and up (`max-w-sm`, `rounded-card`, `shadow-raised`). A full width bottom sheet under 640 px (`rounded-t-sheet`, bottom padding respects the safe area).
+- Title is a short question ("Sign out?"). The body says what happens next in one sentence.
+- The confirm button is `primary` unless the action destroys data, then it is `danger`. Cancel is `secondary` and gets focus first.
+- Desktop buttons sit right aligned, Cancel then confirm, at `md`. On phones they stack full width at `lg`, confirm on top.
+- Esc and a click on the backdrop cancel. While the action runs, the confirm button shows a spinner and a new label ("Signing out..."), and Cancel, Esc and the backdrop do nothing.
+- If the action fails, keep the dialog open and show an `Alert` with `tone="error"` above the buttons.
+- Closing returns focus to the button that opened it.
+
 **Cards**
 - `rounded-card bg-white ring-1 ring-stone-200 p-4` on phones, `p-6` on desktop.
 - On phones, the whole card is the tap target when it opens a detail screen.

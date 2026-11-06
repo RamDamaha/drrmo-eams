@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Login } from '@/pages/Login';
@@ -89,6 +89,14 @@ function renderApp(client = new QueryClient({ defaultOptions: { queries: { retry
     return { client, router };
 }
 
+// Opens the confirmation dialog, then confirms inside it.
+async function confirmSignOut() {
+    fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+    fireEvent.click(
+        within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Sign out' }),
+    );
+}
+
 beforeEach(() => {
     FakeChannel.all = [];
     blockRefresh(false);
@@ -115,7 +123,7 @@ describe('sign out', () => {
         expect(await screen.findByText('private events')).toBeInTheDocument();
         expect(client.getQueryData(['events'])).toBeDefined();
 
-        fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+        await confirmSignOut();
 
         expect(await screen.findByRole('button', { name: 'Sign in' })).toBeInTheDocument();
         expect(client.getQueryData(['events'])).toBeUndefined();
@@ -135,7 +143,9 @@ describe('sign out', () => {
         vi.stubGlobal('fetch', fetchMock);
         renderApp();
 
-        const button = await screen.findByRole('button', { name: 'Sign out' });
+        fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+        const dialog = await screen.findByRole('alertdialog');
+        const button = within(dialog).getByRole('button', { name: 'Sign out' });
         fireEvent.click(button);
         fireEvent.click(button);
 
@@ -156,7 +166,7 @@ describe('sign out', () => {
         );
         renderApp();
 
-        fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+        await confirmSignOut();
 
         expect(await screen.findByRole('button', { name: 'Sign in' })).toBeInTheDocument();
     });
@@ -170,8 +180,9 @@ describe('sign out', () => {
         vi.stubGlobal('fetch', fetchMock);
         renderApp();
 
-        fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
-        expect(await screen.findByRole('alert')).toHaveTextContent(
+        await confirmSignOut();
+        const dialog = screen.getByRole('alertdialog');
+        expect(await within(dialog).findByRole('alert')).toHaveTextContent(
             'Could not sign out. Try again.',
         );
         expect(screen.getByRole('heading', { name: 'My duties' })).toBeInTheDocument();
@@ -192,7 +203,7 @@ describe('sign out', () => {
         fetchMock.mockImplementation((url: string) =>
             url === '/api/logout' ? json(204) : json(200, { data: marshal }),
         );
-        fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Sign out' }));
         expect(await screen.findByRole('button', { name: 'Sign in' })).toBeInTheDocument();
     });
 
@@ -208,9 +219,123 @@ describe('sign out', () => {
         const heard = vi.fn();
         otherTab.onmessage = (event) => heard(event.data);
 
-        fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+        await confirmSignOut();
 
         await waitFor(() => expect(heard).toHaveBeenCalledWith('signed-out'));
+    });
+});
+
+describe('sign out confirmation', () => {
+    function logoutCalls(fetchMock: ReturnType<typeof vi.fn>) {
+        return fetchMock.mock.calls.filter(([url]) => url === '/api/logout');
+    }
+
+    function stub() {
+        const fetchMock = vi.fn((url: string) =>
+            url === '/api/logout' ? json(204) : json(200, { data: marshal }),
+        );
+        vi.stubGlobal('fetch', fetchMock);
+        return fetchMock;
+    }
+
+    it('asks first and does not call the server when opened', async () => {
+        const fetchMock = stub();
+        renderApp();
+
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+        fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+
+        const dialog = await screen.findByRole('alertdialog');
+        expect(dialog).toHaveAccessibleName('Sign out?');
+        expect(dialog).toHaveAccessibleDescription(
+            'You will need your email and password to sign in again.',
+        );
+        expect(logoutCalls(fetchMock)).toHaveLength(0);
+    });
+
+    it('starts with focus on Cancel and keeps the user signed in when cancelled', async () => {
+        const fetchMock = stub();
+        renderApp();
+        fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+
+        const cancel = within(await screen.findByRole('alertdialog')).getByRole('button', {
+            name: 'Cancel',
+        });
+        expect(cancel).toHaveFocus();
+
+        fireEvent.click(cancel);
+
+        await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+        expect(screen.getByRole('heading', { name: 'My duties' })).toBeInTheDocument();
+        expect(logoutCalls(fetchMock)).toHaveLength(0);
+    });
+
+    it('cancels with Esc and returns focus to the Sign out button', async () => {
+        const fetchMock = stub();
+        renderApp();
+        const trigger = await screen.findByRole('button', { name: 'Sign out' });
+        trigger.focus();
+        fireEvent.click(trigger);
+
+        fireEvent(
+            await screen.findByRole('alertdialog'),
+            new Event('cancel', { cancelable: true }),
+        );
+
+        await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+        expect(trigger).toHaveFocus();
+        expect(logoutCalls(fetchMock)).toHaveLength(0);
+    });
+
+    it('cancels when the backdrop is clicked', async () => {
+        const fetchMock = stub();
+        renderApp();
+        fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+
+        fireEvent.click(await screen.findByRole('alertdialog'));
+
+        await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+        expect(logoutCalls(fetchMock)).toHaveLength(0);
+    });
+
+    it('ignores Esc, the backdrop and Cancel while signing out', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn((url: string) =>
+                url === '/api/logout'
+                    ? new Promise<Response>(() => {})
+                    : json(200, { data: marshal }),
+            ),
+        );
+        renderApp();
+        fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+        const dialog = await screen.findByRole('alertdialog');
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Sign out' }));
+        await within(dialog).findByRole('button', { name: 'Signing out...' });
+
+        expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeDisabled();
+        fireEvent(dialog, new Event('cancel', { cancelable: true }));
+        fireEvent.click(dialog);
+
+        expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    });
+
+    it('stays open with an error when sign out fails', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn((url: string) =>
+                url === '/api/logout' ? json(500, {}) : json(200, { data: marshal }),
+            ),
+        );
+        renderApp();
+        await confirmSignOut();
+
+        const dialog = screen.getByRole('alertdialog');
+        expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+            'Could not sign out. Try again.',
+        );
+        expect(within(dialog).getByRole('button', { name: 'Sign out' })).toBeEnabled();
+        expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeEnabled();
     });
 });
 
