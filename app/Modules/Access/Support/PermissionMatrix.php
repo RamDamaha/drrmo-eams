@@ -26,6 +26,7 @@ final class PermissionMatrix
         return [
             'people.view' => ['description' => 'List and view all people', 'grantable' => false, 'roles' => $admin],
             'people.manage' => ['description' => 'Create, edit, import people', 'grantable' => false, 'roles' => $admin],
+            'registrations.review' => ['description' => 'Approve or reject sign up requests', 'grantable' => false, 'roles' => $admin],
             'volunteers.toggle' => ['description' => 'Set volunteer active or inactive', 'grantable' => false, 'roles' => $admin],
             'access.manage' => ['description' => 'Create and revoke grants', 'grantable' => false, 'roles' => $admin],
             'events.view_all' => ['description' => 'See every event', 'grantable' => false, 'roles' => $admin],

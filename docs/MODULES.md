@@ -79,7 +79,10 @@ Count: 4 + 4 + 5 + 1 + 2 + 2 + 2 = 20 tables. Each appears once.
   - `GET /api/me/profile`, `PATCH /api/me/profile` (contact number only)
   - `GET|POST|PATCH|DELETE /api/me/emergency-contacts[/{contact}]`
   - `GET /api/departments`, admin CRUD on `/api/departments`
+  - `POST /api/register`, `POST /api/register/verify`, `POST /api/register/resend` (public Request access for volunteers)
+  - `GET /api/admin/registrations`, `POST /api/admin/registrations/{user}/approve`, `POST /api/admin/registrations/{user}/reject`
 - **Policies:** `UserPolicy`, `EmergencyContactPolicy`, `DepartmentPolicy`.
+- **Contracts used:** `MailSender` (Notifications), `ConsentRecorder` and `AuditLogger` (Records).
 - **Contracts offered:** `PersonDirectory` (find assignable people: active, right role and team).
 - **Events fired:** `VolunteerStatusChanged`, `PersonCreated`.
 - **Frontend:** `features/personnel` with admin pages People list, Person profile, Import, and mobile pages My profile, Emergency contacts.

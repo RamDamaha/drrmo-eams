@@ -44,6 +44,7 @@ Tap targets at least 48 px. Base font 16 px, high contrast for outdoor use. On s
 | Screen | Role | Desktop layout | Phone fallback |
 |---|---|---|---|
 | A-Dashboard | Admin | Three cards across the top: Today's events, Unacknowledged assignments, Overdue reports. Below: table of today's shifts with live status. | Cards stacked, read only |
+| A-Access requests | Admin | Table of volunteer sign up requests with name, email, requested time and status. Filter buttons: Waiting for review (default), Email not confirmed, Rejected, Approved, All. Approve button per waiting row. Reject opens a dialog that needs a reason. | Table scrolls sideways |
 | A-People list | Admin | Table with filters (role, team, status, department), search, bulk actions (activate, deactivate, export). Import CSV button. | Card list, search only |
 | A-Person profile | Admin | Left: details and edit form. Right: tabs for assignments, status history, emergency contacts, grants. Volunteer switch with reason dialog. | Details only |
 | A-Volunteer toggle | Admin | Part of People list and profile, not a separate page. Switch plus reason dialog. | Same dialog |
@@ -64,6 +65,9 @@ Tap targets at least 48 px. Base font 16 px, high contrast for outdoor use. On s
 | Screen | Role | Phone layout | Desktop |
 |---|---|---|---|
 | M-Login | Everyone | Maroon header with the ZPPSU and DRRMO logos, office names and system name. White sheet below with email, password (show and hide), big Sign in button, a "Forgot your password?" link, and a data privacy note. | Two columns: brand panel left, form right |
+| M-Request access | Everyone | Same frame as M-Login. Name, email, password and Confirm password (12 characters at least), a privacy notice checkbox and a Request access button. Link back to sign in. | Same as M-Login |
+| M-Confirm email | Everyone | Same frame as M-Login. A big 6 digit code field, Confirm email button, and a Send a new code button that waits 60 seconds. Explains the code works for 10 minutes. After 5 wrong tries the field locks until a new code is sent. | Same as M-Login |
+| M-Waiting for approval | Everyone | Same frame as M-Login. Says the email is confirmed and the office will review the request, and that an email follows. Back to sign in link. | Same as M-Login |
 | M-Forgot password | Everyone | Same frame as M-Login. Email field and a Send reset link button. After sending, a success note that never says whether the email has an account, and that the link works for 60 minutes. Back to sign in link. | Same as M-Login |
 | M-Reset password | Anyone with a link | Same frame as M-Login. Opened from the email. New password (at least 12 characters, with a hint) and Type it again, then Save new password. Afterwards a note that every device was signed out and a link to sign in. A broken or old link shows a short error and a link to ask for a new one. | Same as M-Login |
 | M-Privacy notice and consent | Everyone | Scrollable notice, plain language summary at top, "I agree" button fixed at bottom. | Centered column |

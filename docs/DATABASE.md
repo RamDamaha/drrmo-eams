@@ -61,7 +61,7 @@ Each module gets a fixed timestamp prefix so parallel sessions never collide and
 |---|---|---|---|
 | 0 | `0001_01_01_*` | Core | Laravel defaults: cache, jobs, failed_jobs, sessions, password_reset_tokens |
 | 1 | `2026_01_01_1000xx` | Access | roles, permissions, role_permission |
-| 2 | `2026_01_01_2000xx` | Personnel | departments, users (FK roles, departments), emergency_contacts, volunteer_status_logs |
+| 2 | `2026_01_01_2000xx` | Personnel | departments, users (FK roles, departments), emergency_contacts, volunteer_status_logs, and `200005` adds the sign up columns to users (account_status, email code fields, reviewed_by, reviewed_at, rejection_reason) |
 | 3 | `2026_01_01_3000xx` | Events | duty_types, campus_locations, events, event_duty_requirements, assignments |
 | 4 | `2026_01_01_3500xx` | Access | refresh_tokens (needs users), permission_grants (needs events) |
 | 5 | `2026_01_01_4000xx` | Monitoring | location_pings, site_reports |
@@ -77,7 +77,7 @@ Foreign key rules: `restrict` on delete for people and events (we soft-close, no
 
 | Table | Index | Why |
 |---|---|---|
-| users | unique(email), (role_id, status), (department_id) | login, assignable list |
+| users | unique(email), (role_id, status), (department_id), (account_status, created_at) | login, assignable list, access requests list |
 | permission_grants | (user_id, permission_id, ends_at), (event_id) | permission check runs on most requests |
 | role_permission | unique(role_id, permission_id) | no duplicates |
 | events | (starts_at), (status), (department_id) | dashboard, coordinator notices |

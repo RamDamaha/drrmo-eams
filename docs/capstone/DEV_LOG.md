@@ -85,6 +85,16 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Evidence: tests/Feature/Core/PasswordResetTest.php, resources/js/pages/PasswordReset.test.tsx
 - Paper: Chapter 3 (account security), Chapter 4 (forgot and reset password screens)
 
+## 2026-11-06 · Request access sign up with email code and admin approval (personnel, notifications)
+- What was built: a public Request access flow for volunteers (`/register`, `/register/verify`, a waiting screen), a 6 digit email code, and an admin screen to approve or reject. Login, refresh and the access token refuse any account that is not active
+- Decision and why: the owner chose public sign up for volunteers only, with admin approval. A new account is pending and can do nothing until an admin approves it, so a stranger cannot get in just by registering
+- Decision and why: the email code is stored only as an HMAC, expires in 10 minutes, locks after 5 wrong tries and can be re-sent once a minute. This stops guessing a 6 digit number
+- Decision and why: sign up gives the same answer when the email is already used, so nobody can probe which emails have accounts
+- Decision and why: emails go through a `MailSender` contract in the Notifications module with a PHPMailer implementation. With `MAIL_MAILER=log` or no `MAIL_HOST` the message, with the code, is written to `storage/logs/laravel.log` so it works on a laptop with no mail server
+- Decision and why: the new states live in a new `account_status` column, apart from the on-call `status`, because "can this person sign in" and "is this volunteer on call" are different questions
+- Evidence: tests/Feature/Personnel/RegistrationTest.php (success, wrong, expired and locked codes, duplicate email, throttle, forbidden for non-admins, audit of approve and reject, pending cannot sign in), resources/js/pages/RequestAccess.test.tsx
+- Paper: Chapter 3 (registration and approval design), Chapter 4 (security tests)
+
 ## 2026-11-06 · JWT auth in HttpOnly cookies (core, access)
 - What was built: a JWT guard (`auth:api`) with a 15 minute access token and a 7 day rotating refresh token, POST /api/refresh, logout that revokes, a `refresh_tokens` table, a CSRF origin check, a `jwt:secret` command, and a client that refreshes once on a 401 and retries
 - Decision and why: the owner asked for JWT instead of the planned Sanctum sessions. The tokens are kept in HttpOnly, SameSite=Lax cookies, never in localStorage, so a script injected into a page cannot steal them

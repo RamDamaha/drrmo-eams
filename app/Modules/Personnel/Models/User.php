@@ -6,6 +6,7 @@ namespace App\Modules\Personnel\Models;
 
 use App\Modules\Access\Enums\Role as RoleCode;
 use App\Modules\Access\Models\Role;
+use App\Modules\Personnel\Enums\AccountStatus;
 use App\Modules\Personnel\Enums\AvailabilityStatus;
 use App\Modules\Personnel\Enums\Team;
 use Database\Factories\UserFactory;
@@ -17,10 +18,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
 
 /**
  * @property Team|null $team
  * @property AvailabilityStatus $status
+ * @property AccountStatus $account_status
+ * @property Carbon|null $email_verified_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $verification_expires_at
+ * @property Carbon|null $verification_sent_at
+ * @property Carbon|null $reviewed_at
  */
 #[Fillable(['name', 'email', 'contact_number', 'role_id', 'department_id', 'team', 'status', 'password'])]
 #[Hidden(['password', 'remember_token'])]
@@ -37,9 +45,13 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
             'disabled_at' => 'datetime',
+            'verification_expires_at' => 'datetime',
+            'verification_sent_at' => 'datetime',
+            'reviewed_at' => 'datetime',
             'password' => 'hashed',
             'team' => Team::class,
             'status' => AvailabilityStatus::class,
+            'account_status' => AccountStatus::class,
         ];
     }
 
@@ -76,5 +88,16 @@ class User extends Authenticatable
     public function isDisabled(): bool
     {
         return $this->disabled_at !== null;
+    }
+
+    /** True when the account may sign in: approved and not disabled. */
+    public function canSignIn(): bool
+    {
+        return ! $this->isDisabled() && $this->account_status === AccountStatus::Active;
+    }
+
+    public function hasPermission(string $code): bool
+    {
+        return $this->role?->permissions->contains('code', $code) ?? false;
     }
 }

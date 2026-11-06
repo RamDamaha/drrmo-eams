@@ -5,6 +5,7 @@ const items = [
     { to: '/admin', label: 'Dashboard' },
     { to: '/admin/events', label: 'Events' },
     { to: '/admin/people', label: 'People' },
+    { to: '/admin/requests', label: 'Access requests' },
     { to: '/admin/map', label: 'Map' },
     { to: '/admin/reports', label: 'Reports' },
     { to: '/admin/memos', label: 'Memos' },

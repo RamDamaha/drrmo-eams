@@ -37,6 +37,19 @@ return [
     |
     */
 
+    /*
+    | PHPMailer settings used by the Notifications module for sign up codes and decisions.
+    | With MAIL_MAILER=log or no MAIL_HOST, the message is written to the Laravel log instead.
+    */
+    'phpmailer' => [
+        'host' => env('MAIL_HOST'),
+        'port' => (int) env('MAIL_PORT', 587),
+        'username' => env('MAIL_USERNAME'),
+        'password' => env('MAIL_PASSWORD'),
+        // tls (STARTTLS), ssl (SMTPS) or empty for none.
+        'encryption' => env('MAIL_ENCRYPTION'),
+    ],
+
     'mailers' => [
 
         'smtp' => [

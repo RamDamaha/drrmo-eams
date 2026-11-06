@@ -6,8 +6,10 @@ namespace App\Modules\Records;
 
 use App\Modules\Records\Contracts\AuditLogger;
 use App\Modules\Records\Contracts\ConsentChecker;
+use App\Modules\Records\Contracts\ConsentRecorder;
 use App\Modules\Records\Services\DatabaseAuditLogger;
 use App\Modules\Records\Services\DatabaseConsentChecker;
+use App\Modules\Records\Services\DatabaseConsentRecorder;
 use Illuminate\Support\ServiceProvider;
 
 class RecordsServiceProvider extends ServiceProvider
@@ -16,5 +18,6 @@ class RecordsServiceProvider extends ServiceProvider
     {
         $this->app->bind(AuditLogger::class, DatabaseAuditLogger::class);
         $this->app->bind(ConsentChecker::class, DatabaseConsentChecker::class);
+        $this->app->bind(ConsentRecorder::class, DatabaseConsentRecorder::class);
     }
 }

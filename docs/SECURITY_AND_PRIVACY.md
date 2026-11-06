@@ -10,6 +10,7 @@ Permissions are seeded codes. Roles have fixed sets. Extra access only comes fro
 |---|---|---|---|---|---|---|
 | `people.view` | List and view all people | ✓ | | | | |
 | `people.manage` | Create, edit, import people | ✓ | | | | |
+| `registrations.review` | Approve or reject sign up requests | ✓ | | | | |
 | `volunteers.toggle` | Set volunteer active or inactive | ✓ | | | | |
 | `access.manage` | Create and revoke grants | ✓ | | | | |
 | `events.view_all` | See every event | ✓ | | | | |
@@ -64,6 +65,14 @@ Scoping rule: every list query is filtered to the user's own rows unless the use
 3. If the notice version changes, step 1 repeats on the next login.
 4. Withdrawal: Profile has a "Stop location consent" button. It sets `withdrawn_at`. Start duty is then blocked with a clear message.
 
+## 3a. Sign up and approval
+
+- Sign up is public but only creates a volunteer. The account has `account_status` pending_email, then pending_approval, and cannot sign in, refresh or call the API until an admin approves it. A rejected account stays locked out and keeps the reason.
+- The 6 digit email code is stored as an HMAC, works for 10 minutes, locks after 5 wrong tries and is sent at most once a minute. Sign up answers the same for an existing email.
+- Agreeing to the privacy notice is required at sign up and is written as a `privacy_notice` consent row.
+- Pending, rejected and disabled accounts get the same "wrong email or password" answer on login, so the answer does not reveal the state.
+- Review needs `registrations.review` (admin only). The person is told the result by email.
+
 ## 4. Audit rules
 
 Write an AUDIT_LOG row for:
@@ -78,6 +87,7 @@ Write an AUDIT_LOG row for:
 - Login, logout, login failures above the throttle limit, password resets
 - A refresh token used twice (`auth.token_reuse_detected`), which revokes that sign in
 - Consent given or withdrawn
+- Sign up requested, email confirmed, request approved or rejected (with the reason): `registration.requested`, `registration.email_verified`, `registration.approved`, `registration.rejected`
 
 Audit rows are insert only. The app has no update or delete route for them, and the scheduled prune keeps them for 3 years.
 
@@ -99,6 +109,9 @@ Audit rows are insert only. The app has no update or delete route for them, and 
 | `POST /api/forgot-password` | 3 per 10 minutes per IP, and one email per account per minute |
 | `POST /api/reset-password` | 10 per 10 minutes per IP |
 | `POST /api/refresh` | 30 per minute per IP |
+| `POST /api/register` | 5 per hour per IP |
+| `POST /api/register/verify` | 10 per 10 minutes per IP, and 5 wrong tries per code |
+| `POST /api/register/resend` | 3 per 10 minutes per IP, and one code per account per minute |
 | `POST /api/me/assignments/{id}/pings` | 10 requests per minute per user, max 50 points per request |
 | `POST /api/me/report-slots/{id}` | 6 per minute per user |
 | Other API | 120 per minute per user |

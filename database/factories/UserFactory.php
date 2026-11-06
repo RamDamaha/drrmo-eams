@@ -6,6 +6,7 @@ namespace Database\Factories;
 
 use App\Modules\Access\Enums\Role as RoleCode;
 use App\Modules\Access\Models\Role;
+use App\Modules\Personnel\Enums\AccountStatus;
 use App\Modules\Personnel\Enums\AvailabilityStatus;
 use App\Modules\Personnel\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -33,6 +34,7 @@ class UserFactory extends Factory
                 ['name' => RoleCode::Volunteer->label()],
             )->id,
             'status' => AvailabilityStatus::Active,
+            'account_status' => AccountStatus::Active,
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
@@ -57,6 +59,11 @@ class UserFactory extends Factory
     public function disabled(): static
     {
         return $this->state(fn () => ['disabled_at' => now()]);
+    }
+
+    public function accountStatus(AccountStatus $status): static
+    {
+        return $this->state(fn () => ['account_status' => $status]);
     }
 
     public function unverified(): static

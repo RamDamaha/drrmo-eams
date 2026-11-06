@@ -2,7 +2,11 @@ import { createBrowserRouter } from 'react-router';
 import { AdminLayout } from '@/layouts/AdminLayout';
 import { MobileLayout } from '@/layouts/MobileLayout';
 import { ForgotPassword } from '@/pages/ForgotPassword';
+import { AccessRequests } from '@/features/personnel/pages/admin/AccessRequests';
 import { Login } from '@/pages/Login';
+import { RequestAccess } from '@/pages/RequestAccess';
+import { VerifyEmail } from '@/pages/VerifyEmail';
+import { WaitingForApproval } from '@/pages/WaitingForApproval';
 import { ResetPassword } from '@/pages/ResetPassword';
 import { Placeholder } from '@/pages/Placeholder';
 import { HomeRedirect, RequireAuth } from './RequireAuth';
@@ -13,6 +17,9 @@ import { NotFound } from '@/pages/NotFound';
 export const router = createBrowserRouter([
     { path: '/', element: <HomeRedirect /> },
     { path: '/login', element: <Login /> },
+    { path: '/register', element: <RequestAccess /> },
+    { path: '/register/verify', element: <VerifyEmail /> },
+    { path: '/register/pending', element: <WaitingForApproval /> },
     { path: '/forgot-password', element: <ForgotPassword /> },
     { path: '/reset-password', element: <ResetPassword /> },
     {
@@ -21,7 +28,10 @@ export const router = createBrowserRouter([
             {
                 path: '/admin',
                 element: <AdminLayout />,
-                children: [{ index: true, element: <Placeholder title="Dashboard" /> }],
+                children: [
+                    { index: true, element: <Placeholder title="Dashboard" /> },
+                    { path: 'requests', element: <AccessRequests /> },
+                ],
             },
         ],
     },

@@ -23,7 +23,7 @@ class ForgotPasswordController
 
         if ($user !== null) {
             // A disabled account never gets a link. The broker also limits one link per minute per account.
-            $sent = ! $user->isDisabled()
+            $sent = $user->canSignIn()
                 && Password::broker()->sendResetLink(['email' => $email]) === Password::RESET_LINK_SENT;
 
             $audit->log('auth.password_reset_requested', $user, null, ['sent' => $sent]);
