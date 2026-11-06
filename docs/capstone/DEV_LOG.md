@@ -95,6 +95,12 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Evidence: tests/Feature/Personnel/RegistrationTest.php (success, wrong, expired and locked codes, duplicate email, throttle, forbidden for non-admins, audit of approve and reject, pending cannot sign in), resources/js/pages/RequestAccess.test.tsx
 - Paper: Chapter 3 (registration and approval design), Chapter 4 (security tests)
 
+## 2026-11-06 · Clear sign in messages for accounts that are not usable yet (core)
+- What was built: when the password is right but the account cannot be used, sign in now says why: confirm the email (with a link to the code screen), waiting for admin approval, not approved, or disabled. Before, all of these said "email or password is wrong", which sent people in circles
+- Decision and why: the reason is shown only after the password has been verified. Someone who does not know the password still gets the same generic answer for a wrong password and an unknown email, so the screen cannot be used to find out who has an account
+- Decision and why: the answer is a 403 with its own code per state, and no cookies are set. A 403 counts toward the login throttle like a wrong password, so guessing is still limited. The failed login audit is unchanged
+- Evidence: tests/Feature/Core/AuthTest.php and tests/Feature/Personnel/RegistrationTest.php (each state with the right password, generic answer for a wrong password or an unknown email, no cookies, throttle, approval lets the person in), resources/js/pages/Login.test.tsx
+- Paper: Chapter 4 (sign in behavior and account enumeration)
 ## 2026-11-06 · Fix the app crashing on load in development (core)
 - What was built: `main.tsx` is now a plain entry file. The session watcher component moved to `SessionWatcher.tsx`, and the entry reuses one React root if it is evaluated twice
 - Why it crashed: the screen said "Unexpected Application Error: Failed to execute removeChild". The console showed `createRoot()` called twice on the same container. `main.tsx` defined a component, which made Vite's hot reload run the whole entry a second time, so two React trees fought over the same page. It only happens on the Vite dev server, not in the production build

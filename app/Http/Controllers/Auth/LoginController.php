@@ -9,6 +9,7 @@ use App\Auth\AuthCookies;
 use App\Auth\RefreshTokens;
 use App\Http\Requests\LoginRequest;
 use App\Http\Resources\MeResource;
+use App\Modules\Personnel\Enums\AccountStatus;
 use App\Modules\Personnel\Models\User;
 use App\Modules\Records\Contracts\AuditLogger;
 use Illuminate\Http\JsonResponse;
@@ -45,11 +46,20 @@ class LoginController
 
         $user = User::query()->where('email', $email)->first();
 
-        // A disabled, pending or rejected account gets the same answer as a wrong password.
-        if ($user === null || ! $user->canSignIn() || ! Hash::check($request->string('password')->toString(), $user->password)) {
+        // An unknown email and a wrong password get the same answer, so nobody can find out which
+        // emails have accounts.
+        if ($user === null || ! Hash::check($request->string('password')->toString(), $user->password)) {
             RateLimiter::hit($key, 60);
 
             return $this->invalid();
+        }
+
+        // The password was right, so this person owns the account and may be told why it cannot be
+        // used yet. Each try still counts toward the throttle.
+        if (! $user->canSignIn()) {
+            RateLimiter::hit($key, 60);
+
+            return $this->notUsable($user);
         }
 
         RateLimiter::clear($key);
@@ -67,6 +77,19 @@ class LoginController
             $accessTokens->issue($user)['token'],
             $refreshTokens->issue($user, $request),
         );
+    }
+
+    /** Only called after the password was checked. Says why the account cannot sign in. */
+    private function notUsable(User $user): JsonResponse
+    {
+        [$code, $message] = match (true) {
+            $user->isDisabled() => ['account_disabled', 'This account is disabled. Contact the DRRMO office.'],
+            $user->account_status === AccountStatus::PendingEmail => ['email_not_confirmed', 'Confirm your email first. Enter the 6 digit code we sent you.'],
+            $user->account_status === AccountStatus::PendingApproval => ['awaiting_approval', 'Your account is waiting for admin approval. We will email you when it is approved.'],
+            default => ['request_rejected', 'Your access request was not approved. Contact the DRRMO office.'],
+        };
+
+        return response()->json(['message' => $message, 'code' => $code], 403);
     }
 
     private function invalid(): JsonResponse

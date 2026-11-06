@@ -70,7 +70,7 @@ Scoping rule: every list query is filtered to the user's own rows unless the use
 - Sign up is public but only creates a volunteer. The account has `account_status` pending_email, then pending_approval, and cannot sign in, refresh or call the API until an admin approves it. A rejected account stays locked out and keeps the reason.
 - The 6 digit email code is stored as an HMAC, works for 10 minutes, locks after 5 wrong tries and is sent at most once a minute. Sign up answers the same for an existing email.
 - Agreeing to the privacy notice is required at sign up and is written as a `privacy_notice` consent row.
-- Pending, rejected and disabled accounts get the same "wrong email or password" answer on login, so the answer does not reveal the state.
+- Login names the account state only after the password was verified as right: the person is told to confirm the email, that the account waits for approval, that the request was not approved, or that the account is disabled. A wrong password or an unknown email always gets the same "wrong email or password" answer, so the screen cannot be used to find out which emails have accounts. Every such try counts toward the login throttle.
 - Review needs `registrations.review` (admin only). The person is told the result by email.
 
 ## 4. Audit rules

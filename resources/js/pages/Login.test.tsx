@@ -119,6 +119,78 @@ describe('login flow', () => {
         );
     });
 
+    it.each([
+        ['email_not_confirmed', 'Confirm your email first. Enter the 6 digit code we sent you.'],
+        [
+            'awaiting_approval',
+            'Your account is waiting for admin approval. We will email you when it is approved.',
+        ],
+        ['request_rejected', 'Your access request was not approved. Contact the DRRMO office.'],
+        ['account_disabled', 'This account is disabled. Contact the DRRMO office.'],
+    ])('explains why a %s account cannot sign in yet', async (code, message) => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn((url: string) => {
+                if (url === '/api/me') return json(401, {});
+                return json(403, { code, message: 'server text' });
+            }),
+        );
+        renderAt('/login');
+
+        fireEvent.change(await screen.findByLabelText('Email'), {
+            target: { value: 'a@example.test' },
+        });
+        fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'right-one' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+        expect(await screen.findByText(message)).toBeInTheDocument();
+        expect(screen.queryByText('The email or password is wrong.')).not.toBeInTheDocument();
+        // Still on the sign in screen.
+        expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
+    });
+
+    it('offers a link to the code screen when the email is not confirmed', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn((url: string) => {
+                if (url === '/api/me') return json(401, {});
+                return json(403, { code: 'email_not_confirmed' });
+            }),
+        );
+        renderAt('/login');
+
+        fireEvent.change(await screen.findByLabelText('Email'), {
+            target: { value: 'ana@example.test' },
+        });
+        fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'right-one' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+        expect(await screen.findByRole('link', { name: 'Enter your code' })).toHaveAttribute(
+            'href',
+            '/register/verify?email=ana%40example.test',
+        );
+    });
+
+    it('does not show the link or an account message for a wrong password', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn((url: string) => {
+                if (url === '/api/me') return json(401, {});
+                return json(422, { code: 'invalid_credentials' });
+            }),
+        );
+        renderAt('/login');
+
+        fireEvent.change(await screen.findByLabelText('Email'), {
+            target: { value: 'ana@example.test' },
+        });
+        fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'nope' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+        expect(await screen.findByText('The email or password is wrong.')).toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: 'Enter your code' })).not.toBeInTheDocument();
+    });
+
     it('keeps a marshal out of the admin area', async () => {
         vi.stubGlobal(
             'fetch',

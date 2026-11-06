@@ -45,10 +45,11 @@ it('rejects a wrong password with no hint about which part was wrong', function 
         ->assertStatus(422)->assertJsonPath('code', 'invalid_credentials');
 });
 
-it('does not let a disabled account in', function () {
+it('does not let a disabled account in, and says so only after the right password', function () {
     $user = User::factory()->disabled()->create();
 
-    loginAs($user)->assertStatus(422);
+    loginAs($user)->assertStatus(403)->assertJsonPath('code', 'account_disabled');
+    loginAs($user, 'nope')->assertStatus(422)->assertJsonPath('code', 'invalid_credentials');
     $this->getJson('/api/me')->assertUnauthorized();
 });
 
