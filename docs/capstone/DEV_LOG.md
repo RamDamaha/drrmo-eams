@@ -56,3 +56,12 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Problem met and fix: composer validate said the lock file was out of date. Only the content hash had drifted, so it was refreshed with no package changes
 - Evidence: Login.test.tsx (sign out test), composer validate output
 - Paper: Chapter 4 (testing on a real machine), Chapter 5 (limitations: setup differs per PC)
+
+## 2026-11-06 · Sign out after an ended session, and a setup without Docker (core)
+- What was built: Sign out now works when the session has already ended, and the README has a way to run the project without Docker
+- Problem met and fix: when the session had expired, /api/logout returned 401 and the Sign out button did nothing. Now 401 and 419 count as already signed out, so the user goes to /login
+- Decision and why: any other failure, such as a server error, shows "Could not sign out. Try again." and keeps the user signed in. Otherwise the screen would say signed out while the real session stays open on a shared phone
+- Problem met and fix: Docker used about 2.8 GB of memory on the owner's 16 GB PC. Herd (PHP 8.5) and the MariaDB from XAMPP use about 0.5 GB for the same work
+- Decision and why: MariaDB 10.4 is not MySQL 8, so the Docker setup and CI stay on MySQL 8 and still catch database differences. All migrations, seeders and 34 Pest tests passed on MariaDB 10.4 and PHP 8.5
+- Evidence: Login.test.tsx (401 and 500 sign out tests), README section "Run without Docker"
+- Paper: Chapter 4 (testing on a real machine), Chapter 5 (limitations: local database differs from the server)

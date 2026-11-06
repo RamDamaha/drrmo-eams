@@ -62,6 +62,49 @@ Tip: add `alias sail='./vendor/bin/sail'` to `~/.bashrc`.
 
 Testing on your phone needs HTTPS for GPS. Use the staging server, or a tunnel such as `./vendor/bin/sail share`.
 
+## Run without Docker (Herd plus XAMPP MariaDB)
+
+Use this if Docker uses too much memory on your PC. It runs PHP and the database straight on Windows.
+
+One-time install:
+
+1. Install [Laravel Herd](https://herd.laravel.com/windows). It gives you PHP 8.3 or newer and Composer.
+2. Install XAMPP. We only use its MySQL (MariaDB). Do not use XAMPP's PHP, it is too old.
+3. In the XAMPP Control Panel, start MySQL. Create a database named `drrmo_eams` (utf8mb4, utf8mb4_unicode_ci). Create a second one named `testing` for the PHP tests.
+4. Copy `.env.example` to `.env` and change these lines:
+
+```
+APP_URL=http://127.0.0.1:8000
+DB_HOST=127.0.0.1
+DB_USERNAME=root
+DB_PASSWORD=
+MAIL_MAILER=log
+SANCTUM_STATEFUL_DOMAINS=localhost,localhost:8000,localhost:5173,127.0.0.1,127.0.0.1:8000
+```
+
+5. In the project folder run:
+
+```
+composer install
+npm install
+php artisan key:generate
+php artisan migrate --seed
+php artisan db:seed --class=DemoSeeder
+```
+
+XAMPP puts its old PHP on the system PATH. Check with `php -v`. If it shows 8.2, put Herd's folder (`C:\Users\<you>\.config\herd\bin`) first on the PATH, or only for VS Code with `terminal.integrated.env.windows` in `.vscode/settings.json`.
+
+Every day:
+
+1. Start MySQL in the XAMPP Control Panel.
+2. In one terminal run `php artisan serve`.
+3. In a second terminal run `npm run dev`. Skip this if you are not changing React code.
+4. Open http://127.0.0.1:8000. Emails are written to `storage/logs/laravel.log`.
+
+To stop, press Ctrl+C in both terminals and stop MySQL in XAMPP.
+
+Run checks with `composer check` and `npm run check`. Note: XAMPP ships MariaDB 10.4, not MySQL 8. The server and CI use MySQL 8, so CI still catches database differences.
+
 ## Stack
 
 | Part | Choice |

@@ -132,4 +132,33 @@ describe('login flow', () => {
 
         expect(await screen.findByRole('button', { name: 'Sign in' })).toBeInTheDocument();
     });
+
+    it('returns to the login page when the session has already ended', async () => {
+        const fetchMock = vi.fn((url: string) => {
+            if (url === '/api/logout') return json(401, { message: 'Unauthenticated.' });
+            return json(200, { data: marshal });
+        });
+        vi.stubGlobal('fetch', fetchMock);
+        renderAt('/me');
+
+        fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+
+        expect(await screen.findByRole('button', { name: 'Sign in' })).toBeInTheDocument();
+    });
+
+    it('stays signed in and shows a message when sign out fails on the server', async () => {
+        const fetchMock = vi.fn((url: string) => {
+            if (url === '/api/logout') return json(500, { message: 'Server Error' });
+            return json(200, { data: marshal });
+        });
+        vi.stubGlobal('fetch', fetchMock);
+        renderAt('/me');
+
+        fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+
+        expect(await screen.findByRole('alert')).toHaveTextContent(
+            'Could not sign out. Try again.',
+        );
+        expect(screen.getByRole('heading', { name: 'My duties' })).toBeInTheDocument();
+    });
 });

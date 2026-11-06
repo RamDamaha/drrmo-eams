@@ -45,7 +45,14 @@ export function useAuthActions() {
     }
 
     async function logout(): Promise<void> {
-        await api('/api/logout', { method: 'POST' });
+        try {
+            await api('/api/logout', { method: 'POST' });
+        } catch (error) {
+            // A session that already ended (401) or an expired token (419) still counts as signed out.
+            const ended =
+                error instanceof ApiError && (error.status === 401 || error.status === 419);
+            if (!ended) throw error;
+        }
         queryClient.setQueryData(meKey, null);
     }
 
