@@ -13,9 +13,10 @@ Follow docs/DESIGN_SYSTEM.md exactly.
 
 Look and feel: calm, official and trustworthy, like a well run university office.
 Not playful, not flashy. Plenty of white space, one clear main action per screen.
-Flat surfaces only: no gradients, glows, dot or grid patterns, glass effects,
-pill badges, emoji, or rows of icon feature cards. If an element is only there
-to decorate, leave it out.
+Keep decoration quiet. Allowed: one soft maroon gradient on a large brand
+surface, the ZPPSU gear as a faint watermark, a thin gold rule, and the short
+gold to orange brand stripe above a main heading. Not allowed: dot or grid
+patterns, glass effects, neon glows, pill badges, emoji, or filled icon tiles.
 
 Colors: ZPPSU maroon is the brand and the color of primary buttons. Gold is a
 small accent on dark maroon surfaces only. DRRMO orange ("ember") means live or
@@ -48,9 +49,11 @@ The system belongs to two owners, and the design shows both.
 
 The design should look like it was made by an office that takes safety seriously, not like a startup landing page. In practice:
 
-- Solid colors. Maroon surfaces are flat `maroon-900`, with no gradient or texture.
-- One accent at a time. A short 2 px `gold-400` rule above a title on a maroon surface is the only decoration we use.
-- Content over ornament. Say what the system does in one sentence instead of a grid of feature icons.
+- Brand surfaces (only the login brand panel today) may use one soft gradient from `maroon-800` to `maroon-950`, with a faint gold light in one corner. Everything else is solid.
+- The ZPPSU gear may sit behind a brand surface as a watermark at 5% opacity, grayscale, desktop only.
+- The **brand stripe** is a short bar (4 by 48 px) from gold to DRRMO orange. It joins the two offices. Use it once per screen at most, above the main heading.
+- Eyebrow labels on maroon use a thin gold rule and uppercase gold text, never a pill or badge.
+- Lists of points use outline icons in a hairline square, separated by hairlines. No filled tiles.
 - Hierarchy comes from size, weight and spacing, not from boxes, badges and colors.
 - Every screen should still make sense in grayscale.
 
@@ -89,8 +92,8 @@ Use Tailwind classes with these names, for example `bg-maroon-700` or `text-embe
 | `maroon-900` | `#520f14` | Dark surfaces: login brand panel, admin sidebar |
 | `maroon-950` | `#33080b` | Deepest end of gradients |
 | `gold-200` to `gold-300` | `#fbe08e` to `#f7cb4f` | Accent text and icons on dark maroon |
-| `gold-400` | `#f2b82a` | The thin rule above titles on maroon |
-| `ember-500` | `#f04e12` | Live dots and map pins (not for text) |
+| `gold-400` | `#f2b82a` | Thin rules on maroon, start of the brand stripe |
+| `ember-500` | `#f04e12` | End of the brand stripe, live dots, map pins (not for text) |
 | `ember-600` | `#d63a0a` | "On duty" button and banner background (white text passes AA) |
 | `ember-700` | `#b12c0b` | Ember text on white (overdue, late) |
 
@@ -134,7 +137,7 @@ Rules:
 
 | Role | Classes |
 |---|---|
-| Display (login brand column only) | `text-4xl font-semibold leading-tight tracking-tight text-balance` |
+| Display (login brand panel only) | `text-[1.625rem] sm:text-4xl lg:text-[2.75rem] font-semibold tracking-tight text-balance` |
 | Page title | `text-2xl font-semibold tracking-tight text-stone-900` |
 | Section title | `text-lg font-semibold text-stone-900` |
 | Body | `text-base text-stone-700` |
@@ -231,8 +234,8 @@ All in `resources/js/shared/ui`. Add a new shared piece only when two screens ne
 
 ### Login (reference build)
 
-- Phone: a flat maroon header with both logos centered and the two office names under them. Below it, on white: the system name in small maroon text, the "Sign in" title, the form, and a footer with the privacy line.
-- Desktop: two equal columns. The left column is flat maroon with the logos and office names at the top, the system name and one sentence in the middle, and the city at the bottom. The right column holds the form on white, with the footer at the bottom.
+- Phone: a maroon header with both logos, the office names, the "DRRMO EAMS" eyebrow and the system name. A white sheet with rounded top corners slides over it and holds the brand stripe, the "Sign in" title, the form, and a privacy line under a hairline.
+- Desktop: two columns. The left brand panel has the logos and office names at the top, then the eyebrow, system name, one sentence and three points separated by hairlines, with the gear watermark behind. The right side has the form on plain white.
 
 ## 8. States every screen needs
 

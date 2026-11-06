@@ -57,6 +57,11 @@
     --shadow-raised: 0 10px 30px -10px rgb(51 8 11 / 0.25), 0 4px 10px -4px rgb(28 25 23 / 0.1);
 }
 
+/* The brand stripe: ZPPSU gold into DRRMO orange. One short bar above the main heading, nothing more. */
+@utility brand-stripe {
+    background-image: linear-gradient(90deg, var(--color-gold-400), var(--color-ember-500));
+}
+
 @layer base {
     html {
         -webkit-tap-highlight-color: transparent;

@@ -1,6 +1,6 @@
-// Landing and login screen (M-Login in SCREENS.md). Phone first: slim brand bar, then the form.
-// On wide screens it splits into a maroon brand column on the left and the form on the right.
-import { useState, type FormEvent } from 'react';
+// Landing and login screen (M-Login in SCREENS.md). Phone first: brand header, then the form.
+// On wide screens it splits into a brand panel on the left and the form on the right.
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { Navigate, useNavigate } from 'react-router';
 import { useAuthActions, useMe } from '@/app/auth';
 import { ApiError } from '@/shared/api/client';
@@ -18,46 +18,108 @@ function messageFor(error: unknown): string {
     return 'Something went wrong. Check your connection and try again.';
 }
 
+const highlights: { title: string; text: string; icon: ReactNode }[] = [
+    {
+        title: 'Know your duty',
+        text: 'Assignments reach you by email and show up on your phone.',
+        icon: (
+            <path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm4 10 2 2 4-4" />
+        ),
+    },
+    {
+        title: 'Check in on site',
+        text: 'Acknowledge and start duty with one tap.',
+        icon: (
+            <path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Zm0-9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+        ),
+    },
+    {
+        title: 'Keep DRRMO informed',
+        text: 'Send site reports so every event stays safe.',
+        icon: <path d="M4 4h16v12H8l-4 4V4Zm4 5h8M8 12h5" />,
+    },
+];
+
 const year = new Date().getFullYear();
 
-// Logos and office names. On phones this is a slim header bar; on desktop it fills the left column.
 function BrandPanel() {
     return (
-        <section aria-label="ZPPSU DRRMO" className="on-dark bg-maroon-900 text-white lg:flex">
-            <div className="mx-auto flex w-full max-w-md flex-col items-center gap-3 px-6 py-6 text-center sm:max-w-lg lg:max-w-none lg:items-start lg:justify-between lg:gap-0 lg:px-14 lg:py-12 lg:text-left xl:px-16">
-                <div className="flex shrink-0 items-center gap-4">
-                    <BrandLogos size="md" className="shrink-0 text-white lg:[&_img]:size-16" />
-                    <div className="hidden leading-snug lg:block">
-                        <p className="text-sm text-white/80">
+        <section
+            aria-label="About the system"
+            className="on-dark relative isolate overflow-hidden bg-maroon-900 text-white"
+        >
+            {/* Background: a quiet maroon gradient with the ZPPSU gear as a faint watermark on desktop. */}
+            <div
+                aria-hidden="true"
+                className="absolute inset-0 -z-10 bg-[radial-gradient(100%_60%_at_100%_0%,rgb(242_184_42/0.10),transparent_60%),linear-gradient(165deg,var(--color-maroon-800),var(--color-maroon-950))]"
+            />
+            <img
+                src="/images/brand/zppsu-logo.webp"
+                alt=""
+                aria-hidden="true"
+                className="pointer-events-none absolute -right-28 -bottom-28 -z-10 hidden w-[560px] opacity-[0.05] grayscale lg:block"
+            />
+
+            <div className="mx-auto flex h-full max-w-xl flex-col px-6 pt-8 pb-14 sm:px-10 lg:max-w-none lg:px-14 lg:py-10 xl:px-20">
+                <header className="flex items-center gap-4">
+                    <BrandLogos
+                        size="md"
+                        className="shrink-0 text-white [&_img]:drop-shadow-[0_2px_6px_rgb(0_0_0/0.3)] lg:[&_img]:size-16"
+                    />
+                    <div className="min-w-0 leading-tight">
+                        <p className="text-[0.8125rem] text-white/80">
                             Zamboanga Peninsula Polytechnic State University
                         </p>
-                        <p className="text-sm font-semibold text-gold-300">
+                        <p className="mt-0.5 text-[0.8125rem] font-semibold text-gold-300">
                             Disaster Risk Reduction and Management Office
                         </p>
                     </div>
-                </div>
+                </header>
 
-                <div className="leading-snug lg:hidden">
-                    <p className="text-xs text-white/80">
-                        Zamboanga Peninsula Polytechnic State University
+                <div className="mt-8 lg:my-auto lg:max-w-xl lg:py-8">
+                    <p className="flex items-center gap-3 text-xs font-semibold tracking-[0.16em] text-gold-300 uppercase">
+                        <span className="h-px w-8 bg-gold-400" aria-hidden="true" />
+                        DRRMO EAMS
                     </p>
-                    <p className="text-xs font-semibold text-gold-300">
-                        Disaster Risk Reduction and Management Office
-                    </p>
-                </div>
-
-                <div className="hidden max-w-md lg:block">
-                    <div className="h-0.5 w-10 bg-gold-400" aria-hidden="true" />
-                    <p className="mt-6 text-4xl leading-tight font-semibold tracking-tight text-balance">
+                    <h2 className="mt-4 text-[1.625rem] leading-[1.15] font-semibold tracking-tight text-balance sm:text-4xl lg:text-[2.5rem] lg:leading-[1.1] xl:text-[2.75rem]">
                         Personnel Event Assignment and Monitoring System
+                    </h2>
+                    <p className="mt-4 hidden max-w-md text-lg leading-relaxed text-pretty text-white/75 sm:block">
+                        One place to plan campus events, assign marshals and volunteers, and follow
+                        every duty from start to end.
                     </p>
-                    <p className="mt-4 text-base leading-relaxed text-pretty text-white/75">
-                        Plan campus events, assign marshals and volunteers, and follow each duty
-                        from start to end.
-                    </p>
+
+                    <ul className="mt-8 hidden max-w-md divide-y divide-white/10 border-y border-white/10 lg:block">
+                        {highlights.map((item) => (
+                            <li key={item.title} className="flex gap-4 py-3.5">
+                                <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg text-gold-300 ring-1 ring-white/15">
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        className="size-5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="1.8"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        aria-hidden="true"
+                                    >
+                                        {item.icon}
+                                    </svg>
+                                </span>
+                                <span>
+                                    <span className="block font-medium">{item.title}</span>
+                                    <span className="block text-[0.9375rem] text-pretty text-white/65">
+                                        {item.text}
+                                    </span>
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
 
-                <p className="hidden text-sm text-white/60 lg:block">Zamboanga City, Philippines</p>
+                <p className="hidden text-sm text-white/50 lg:block">
+                    © {year} ZPPSU DRRMO · Zamboanga City
+                </p>
             </div>
         </section>
     );
@@ -89,18 +151,16 @@ export function Login() {
     }
 
     return (
-        <div className="flex min-h-dvh flex-col bg-white lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="min-h-dvh bg-white lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
             <BrandPanel />
 
-            <main className="flex flex-1 flex-col px-6 pt-10 pb-8 sm:px-10 lg:px-14 lg:pt-12">
-                <div className="mx-auto mb-12 w-full max-w-md lg:my-auto lg:max-w-sm">
-                    <p className="mb-2 text-sm font-semibold text-maroon-700 lg:hidden">
-                        Personnel Event Assignment and Monitoring System
-                    </p>
-                    <h1 className="text-2xl font-semibold tracking-tight text-stone-900 lg:text-[1.75rem]">
+            <main className="relative -mt-5 rounded-t-[1.25rem] bg-white px-6 pt-8 pb-10 sm:px-10 lg:mt-0 lg:flex lg:flex-col lg:rounded-none lg:px-14 lg:py-12">
+                <div className="mx-auto w-full max-w-sm sm:max-w-xl lg:my-auto lg:max-w-sm">
+                    <div className="brand-stripe h-1 w-12 rounded-full" aria-hidden="true" />
+                    <h1 className="mt-5 text-2xl font-semibold tracking-tight text-stone-900 sm:text-[1.75rem]">
                         Sign in
                     </h1>
-                    <p className="mt-1 text-pretty text-stone-600">
+                    <p className="mt-1.5 text-pretty text-stone-600">
                         Use the account given to you by the DRRMO office.
                     </p>
 
@@ -125,23 +185,39 @@ export function Login() {
 
                         {error && <Alert tone="error">{error}</Alert>}
 
-                        <Button type="submit" block loading={busy} className="mt-1">
+                        <Button type="submit" block loading={busy}>
                             {busy ? 'Signing in...' : 'Sign in'}
                         </Button>
                     </form>
 
-                    <p className="mt-6 text-sm text-pretty text-stone-600">
+                    <p className="mt-5 text-sm text-pretty text-stone-600">
                         Forgot your password? Ask the DRRMO office to reset it.
                     </p>
+
+                    <div className="mt-10 flex gap-3 border-t border-stone-200 pt-5 text-[0.8125rem] leading-relaxed text-stone-500">
+                        <svg
+                            viewBox="0 0 24 24"
+                            className="mt-0.5 size-4 shrink-0 text-stone-400"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                        >
+                            <path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6l-8-3Z" />
+                            <path d="m9 12 2 2 4-4" />
+                        </svg>
+                        <p>
+                            Your information is protected under the Data Privacy Act of 2012 (RA
+                            10173). Location is only shared while you are on duty.
+                        </p>
+                    </div>
                 </div>
 
-                <footer className="mx-auto mt-auto w-full max-w-md border-t border-stone-200 pt-5 text-xs leading-relaxed text-stone-500 lg:mt-0 lg:max-w-sm">
-                    <p className="text-pretty">
-                        Personal data is handled under the Data Privacy Act of 2012 (RA 10173).
-                        Location is shared only while you are on duty.
-                    </p>
-                    <p className="mt-2">© {year} ZPPSU DRRMO</p>
-                </footer>
+                <p className="mt-10 text-center text-xs text-stone-500 lg:hidden">
+                    © {year} ZPPSU DRRMO · Zamboanga City
+                </p>
             </main>
         </div>
     );

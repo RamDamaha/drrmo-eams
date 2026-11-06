@@ -63,7 +63,7 @@ Tap targets at least 48 px. Base font 16 px, high contrast for outdoor use. On s
 
 | Screen | Role | Phone layout | Desktop |
 |---|---|---|---|
-| M-Login | Everyone | Flat maroon header with the ZPPSU and DRRMO logos and office names. Below it: system name, email, password (show and hide), big Sign in button, a line saying the DRRMO office resets forgotten passwords, and a data privacy footer. | Two columns: brand panel left, form right |
+| M-Login | Everyone | Maroon header with the ZPPSU and DRRMO logos, office names and system name. White sheet below with email, password (show and hide), big Sign in button, a line saying the DRRMO office resets forgotten passwords, and a data privacy note. | Two columns: brand panel left, form right |
 | M-Privacy notice and consent | Everyone | Scrollable notice, plain language summary at top, "I agree" button fixed at bottom. | Centered column |
 | M-Location consent | Marshal, Volunteer | Short text with three bullets (when, who sees it, how long kept), Agree and Not now buttons. | Centered column |
 | M-My assignments | Marshal, Volunteer | Tabs Today and Upcoming. Each card: event, time, place, duty type, status chip. Current or next shift pinned on top with its main button (Acknowledge or Start duty). | Two-column cards |
