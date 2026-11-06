@@ -24,7 +24,8 @@ function fieldErrors(error: unknown): Record<string, string> {
 
 export function RequestAccess() {
     const navigate = useNavigate();
-    const [name, setName] = useState('');
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmation, setConfirmation] = useState('');
@@ -37,7 +38,8 @@ export function RequestAccess() {
         event.preventDefault();
         setFormError(null);
         const local: Record<string, string> = {};
-        if (name.trim().length < 2) local.name = 'Enter your full name.';
+        if (firstName.trim() === '') local.first_name = 'Enter your first name.';
+        if (lastName.trim() === '') local.last_name = 'Enter your last name.';
         if (!/^\S+@\S+\.\S+$/.test(email)) local.email = 'Enter a valid email address.';
         if (password.length < MIN_LENGTH) local.password = `Use at least ${MIN_LENGTH} characters.`;
         else if (password !== confirmation) local.password_confirmation = 'The passwords differ.';
@@ -48,7 +50,8 @@ export function RequestAccess() {
         setBusy(true);
         try {
             await requestAccess({
-                name: name.trim(),
+                first_name: firstName.trim(),
+                last_name: lastName.trim(),
                 email,
                 password,
                 password_confirmation: confirmation,
@@ -77,11 +80,21 @@ export function RequestAccess() {
         >
             <form onSubmit={submit} className="mt-8 space-y-5" noValidate>
                 <TextField
-                    label="Full name"
-                    autoComplete="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    error={errors.name}
+                    label="First name"
+                    autoComplete="given-name"
+                    maxLength={100}
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    error={errors.first_name}
+                    required
+                />
+                <TextField
+                    label="Last name"
+                    autoComplete="family-name"
+                    maxLength={100}
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    error={errors.last_name}
                     required
                 />
                 <TextField

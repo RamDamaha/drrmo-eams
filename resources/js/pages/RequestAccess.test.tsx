@@ -62,7 +62,8 @@ describe('request access', () => {
 
         fireEvent.click(screen.getByRole('button', { name: 'Request access' }));
 
-        expect(await screen.findByText('Enter your full name.')).toBeInTheDocument();
+        expect(await screen.findByText('Enter your first name.')).toBeInTheDocument();
+        expect(screen.getByText('Enter your last name.')).toBeInTheDocument();
         expect(screen.getByText('You need to agree to continue.')).toBeInTheDocument();
         expect(fetchMock).not.toHaveBeenCalled();
     });
@@ -72,7 +73,8 @@ describe('request access', () => {
         vi.stubGlobal('fetch', fetchMock);
         const router = renderAt('/register');
 
-        fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Ana Reyes' } });
+        fireEvent.change(screen.getByLabelText('First name'), { target: { value: ' Ana ' } });
+        fireEvent.change(screen.getByLabelText('Last name'), { target: { value: 'Reyes' } });
         fireEvent.change(screen.getByLabelText('Email'), {
             target: { value: 'ana@example.test' },
         });
@@ -88,7 +90,8 @@ describe('request access', () => {
         await waitFor(() => expect(router.state.location.pathname).toBe('/register/verify'));
         expect(router.state.location.search).toBe('?email=ana%40example.test');
         expect(bodyOf(fetchMock, '/api/register')).toMatchObject({
-            name: 'Ana Reyes',
+            first_name: 'Ana',
+            last_name: 'Reyes',
             email: 'ana@example.test',
             privacy_consent: true,
         });
@@ -154,6 +157,8 @@ describe('confirm email', () => {
 describe('admin access requests', () => {
     const row = {
         id: 7,
+        first_name: 'Ana',
+        last_name: 'Reyes',
         name: 'Ana Reyes',
         email: 'ana@example.test',
         account_status: 'pending_approval',

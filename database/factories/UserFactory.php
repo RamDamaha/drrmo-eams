@@ -26,7 +26,8 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
+            'first_name' => fake()->firstName(),
+            'last_name' => fake()->lastName(),
             'email' => fake()->unique()->userName().'@example.test',
             'contact_number' => '09'.fake()->numerify('#########'),
             'role_id' => fn () => Role::query()->firstOrCreate(

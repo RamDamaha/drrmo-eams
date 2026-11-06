@@ -95,6 +95,14 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Evidence: tests/Feature/Personnel/RegistrationTest.php (success, wrong, expired and locked codes, duplicate email, throttle, forbidden for non-admins, audit of approve and reject, pending cannot sign in), resources/js/pages/RequestAccess.test.tsx
 - Paper: Chapter 3 (registration and approval design), Chapter 4 (security tests)
 
+## 2026-11-06 · First name and last name instead of one name (personnel)
+- What was built: `users.name` is replaced by `first_name` and `last_name` (migration `200006`). Request access asks for both. The API returns both plus a combined `name` for display, so emails, the audit text and the admin list still show "First Last"
+- Decision and why: the owner asked for two fields, in the form and in the database, so records can be sorted and searched by last name and imports can match them
+- Decision and why: existing users were split at the last space. "Maria Dela Cruz" became "Maria Dela" and "Cruz". A one word name goes to first_name and last_name gets a dash, which the display name leaves out. The migration can be rolled back and joins the two names again
+- Decision and why: both names are required, trimmed and limited to 100 characters
+- Evidence: tests/Feature/Personnel/UserNameTest.php (display name, the split and its rollback), tests/Feature/Personnel/RegistrationTest.php (validation, review list, /api/me), resources/js/pages/RequestAccess.test.tsx
+- Paper: Chapter 3 (data design), Chapter 4 (registration screen)
+
 ## 2026-11-06 · JWT auth in HttpOnly cookies (core, access)
 - What was built: a JWT guard (`auth:api`) with a 15 minute access token and a 7 day rotating refresh token, POST /api/refresh, logout that revokes, a `refresh_tokens` table, a CSRF origin check, a `jwt:secret` command, and a client that refreshes once on a 401 and retries
 - Decision and why: the owner asked for JWT instead of the planned Sanctum sessions. The tokens are kept in HttpOnly, SameSite=Lax cookies, never in localStorage, so a script injected into a page cannot steal them

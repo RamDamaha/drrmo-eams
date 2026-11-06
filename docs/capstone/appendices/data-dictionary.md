@@ -35,7 +35,8 @@ Filled in per milestone. See ../../DOCUMENTATION_GUIDE.md. Types are shown as La
 | Column | Type | Notes |
 |---|---|---|
 | id | bigint | primary key |
-| name | string | |
+| first_name | string(100) | required |
+| last_name | string(100) | required. A dash means the person gave one word only (see the name split in DEV_LOG) |
 | email | string | unique, used to log in |
 | contact_number | string(32) | optional |
 | role_id | foreign key | restrict on delete |

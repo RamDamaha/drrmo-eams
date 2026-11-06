@@ -2,7 +2,8 @@
 import { api } from '@/shared/api/client';
 
 export interface RegisterInput {
-    name: string;
+    first_name: string;
+    last_name: string;
     email: string;
     password: string;
     password_confirmation: string;
@@ -29,6 +30,9 @@ export type RequestStatus = 'pending_email' | 'pending_approval' | 'active' | 'r
 
 export interface AccessRequest {
     id: number;
+    first_name: string;
+    last_name: string;
+    // First and last name together, for display.
     name: string;
     email: string;
     account_status: RequestStatus;

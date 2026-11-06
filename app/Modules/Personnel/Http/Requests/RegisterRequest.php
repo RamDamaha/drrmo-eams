@@ -15,11 +15,22 @@ class RegisterRequest extends FormRequest
         return true;
     }
 
+    /** Names are trimmed before the rules run, so "  " counts as empty. */
+    protected function prepareForValidation(): void
+    {
+        foreach (['first_name', 'last_name'] as $field) {
+            if (is_string($this->input($field))) {
+                $this->merge([$field => trim($this->input($field))]);
+            }
+        }
+    }
+
     /** @return array<string, list<mixed>> */
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'min:2', 'max:120'],
+            'first_name' => ['required', 'string', 'max:100'],
+            'last_name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'string', 'email', 'max:255'],
             'password' => ['required', 'string', 'confirmed', 'max:255', Password::min(ResetPasswordRequest::MIN_LENGTH)],
             'privacy_consent' => ['accepted'],

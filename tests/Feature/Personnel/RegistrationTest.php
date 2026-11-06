@@ -47,7 +47,8 @@ beforeEach(function () {
 function signUp(array $overrides = []): TestResponse
 {
     return test()->postJson('/api/register', array_merge([
-        'name' => 'Pending Person',
+        'first_name' => 'Pending',
+        'last_name' => 'Person',
         'email' => 'pending@example.test',
         'password' => 'a-long-safe-password',
         'password_confirmation' => 'a-long-safe-password',
@@ -171,7 +172,7 @@ it('stops refreshing and using the app once an account is not active', function 
 
 function pendingApproval(): User
 {
-    return User::factory()->accountStatus(AccountStatus::PendingApproval)->create(['name' => 'Waiting Person']);
+    return User::factory()->accountStatus(AccountStatus::PendingApproval)->create(['first_name' => 'Waiting', 'last_name' => 'Person']);
 }
 
 it('lets an admin list requests by status', function () {
@@ -245,4 +246,38 @@ it('forbids everyone but an admin from the review endpoints', function (RoleCode
 
 it('needs a signed in user for the review endpoints', function () {
     $this->getJson('/api/admin/registrations')->assertUnauthorized();
+});
+
+it('needs a first name and a last name, trims them and limits them to 100 characters', function () {
+    signUp(['first_name' => '   '])->assertStatus(422)->assertJsonValidationErrors('first_name');
+    signUp(['last_name' => ''])->assertStatus(422)->assertJsonValidationErrors('last_name');
+    signUp(['first_name' => str_repeat('a', 101)])->assertStatus(422)->assertJsonValidationErrors('first_name');
+    signUp(['last_name' => str_repeat('a', 101)])->assertStatus(422)->assertJsonValidationErrors('last_name');
+    expect(User::query()->count())->toBe(0);
+
+    signUp(['first_name' => '  Ana  ', 'last_name' => ' Reyes '])->assertStatus(202);
+    $user = User::query()->firstOrFail();
+    expect($user->first_name)->toBe('Ana')->and($user->last_name)->toBe('Reyes')->and($user->name)->toBe('Ana Reyes');
+    expect($this->mail->sent[0]['body'])->toContain('Hello Ana Reyes');
+});
+
+it('returns first name, last name and the full name in the review list', function () {
+    $admin = User::factory()->role(RoleCode::Admin)->create();
+    pendingApproval();
+
+    withAuthCookies(loginCookies($admin))->getJson('/api/admin/registrations')
+        ->assertOk()
+        ->assertJsonPath('data.0.first_name', 'Waiting')
+        ->assertJsonPath('data.0.last_name', 'Person')
+        ->assertJsonPath('data.0.name', 'Waiting Person');
+});
+
+it('returns the names in /api/me', function () {
+    $user = User::factory()->create(['first_name' => 'Ana', 'last_name' => 'Reyes']);
+
+    withAuthCookies(loginCookies($user))->getJson('/api/me')
+        ->assertOk()
+        ->assertJsonPath('data.first_name', 'Ana')
+        ->assertJsonPath('data.last_name', 'Reyes')
+        ->assertJsonPath('data.name', 'Ana Reyes');
 });

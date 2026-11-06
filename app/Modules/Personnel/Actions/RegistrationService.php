@@ -38,14 +38,14 @@ class RegistrationService
      * Create a pending volunteer and email the code. If the email is already taken nothing
      * changes, so the caller can answer the same way and nobody can probe for accounts.
      */
-    public function register(string $name, string $email, string $password, ?string $ip): void
+    public function register(string $firstName, string $lastName, string $email, string $password, ?string $ip): void
     {
         if (User::query()->where('email', $email)->exists()) {
             return;
         }
 
-        $user = DB::transaction(function () use ($name, $email, $password, $ip): User {
-            $user = new User(['name' => $name, 'email' => $email, 'password' => $password]);
+        $user = DB::transaction(function () use ($firstName, $lastName, $email, $password, $ip): User {
+            $user = new User(['first_name' => $firstName, 'last_name' => $lastName, 'email' => $email, 'password' => $password]);
             $user->role_id = Role::query()->where('code', RoleCode::Volunteer->value)->value('id');
             $user->account_status = AccountStatus::PendingEmail;
             $user->save();

@@ -8,6 +8,8 @@ import { Login } from './Login';
 
 const marshal = {
     id: 1,
+    first_name: 'Test',
+    last_name: 'Marshal',
     name: 'Test Marshal',
     email: 'marshal@example.test',
     role: 'marshal',

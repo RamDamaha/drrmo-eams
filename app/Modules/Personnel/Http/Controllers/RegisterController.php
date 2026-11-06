@@ -17,7 +17,8 @@ class RegisterController
     public function __invoke(RegisterRequest $request, RegistrationService $registration): JsonResponse
     {
         $registration->register(
-            trim($request->string('name')->toString()),
+            $request->string('first_name')->toString(),
+            $request->string('last_name')->toString(),
             Str::lower($request->string('email')->toString()),
             $request->string('password')->toString(),
             $request->ip(),
