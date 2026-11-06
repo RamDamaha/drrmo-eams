@@ -95,6 +95,13 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Evidence: tests/Feature/Personnel/RegistrationTest.php (success, wrong, expired and locked codes, duplicate email, throttle, forbidden for non-admins, audit of approve and reject, pending cannot sign in), resources/js/pages/RequestAccess.test.tsx
 - Paper: Chapter 3 (registration and approval design), Chapter 4 (security tests)
 
+## 2026-11-06 · Fix the app crashing on load in development (core)
+- What was built: `main.tsx` is now a plain entry file. The session watcher component moved to `SessionWatcher.tsx`, and the entry reuses one React root if it is evaluated twice
+- Why it crashed: the screen said "Unexpected Application Error: Failed to execute removeChild". The console showed `createRoot()` called twice on the same container. `main.tsx` defined a component, which made Vite's hot reload run the whole entry a second time, so two React trees fought over the same page. It only happens on the Vite dev server, not in the production build
+- Decision and why: keep entry files free of components and make the mount safe to repeat, so a hot reload can never mount the app twice
+- Evidence: a browser check on /admin and /admin/requests, with the entry loading once and no crash while changing filters and opening and cancelling the sign out dialog
+- Paper: not needed (development tooling)
+
 ## 2026-11-06 · Proper sign out (core)
 - What was built: one sign out path that clears all client state, stops quiet re-login, signs out other tabs, and keeps protected answers out of browser memory. The server cleans up the cookies exactly and audits the sign out with the right actor
 - Decision and why: sign out clears every cached answer, not only the user record. Before, the next person on a shared phone could briefly see data of the one before. `queryClient.clear()` would also detach the live user query the route guards listen to, so the same wipe is done by removing every query except that one
