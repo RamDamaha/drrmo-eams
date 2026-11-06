@@ -132,7 +132,7 @@ describe('confirm email', () => {
         expect(
             await screen.findByText('Too many wrong codes. Ask for a new code.'),
         ).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Send a new code' })).toBeEnabled();
+        expect(screen.getByRole('button', { name: 'Send a new code in 60s' })).toBeDisabled();
     });
 
     it('moves to the waiting screen when the code is right', async () => {

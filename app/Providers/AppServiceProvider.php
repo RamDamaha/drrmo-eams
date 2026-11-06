@@ -6,8 +6,6 @@ namespace App\Providers;
 
 use App\Auth\AccessTokens;
 use App\Auth\JwtGuard;
-use App\Modules\Personnel\Models\User;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\JsonResponse;
@@ -65,12 +63,6 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('reset-password', fn (Request $request) => Limit::perMinutes(10, 10)
             ->by((string) $request->ip())
             ->response(fn () => $this->tooManyAttempts()));
-
-        // The emailed link opens the React screen, which posts to /api/reset-password.
-        ResetPassword::createUrlUsing(fn (User $user, string $token): string => url('/reset-password').'?'.http_build_query([
-            'token' => $token,
-            'email' => $user->email,
-        ]));
     }
 
     private function tooManyAttempts(): JsonResponse

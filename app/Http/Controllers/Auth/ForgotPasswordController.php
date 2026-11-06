@@ -8,8 +8,10 @@ use App\Http\Requests\ForgotPasswordRequest;
 use App\Modules\Personnel\Models\User;
 use App\Modules\Records\Contracts\AuditLogger;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
+use Throwable;
 
 /** Emails a reset link. The answer is the same whether or not the email has an account. */
 class ForgotPasswordController
@@ -22,9 +24,17 @@ class ForgotPasswordController
         $user = User::query()->where('email', $email)->first();
 
         if ($user !== null) {
-            // A disabled account never gets a link. The broker also limits one link per minute per account.
-            $sent = $user->canSignIn()
-                && Password::broker()->sendResetLink(['email' => $email]) === Password::RESET_LINK_SENT;
+            // Only an active account gets a link. Pending, rejected and disabled accounts never do.
+            // The broker also limits one link per minute per account. A mail failure is logged and
+            // the answer stays the same, so nobody can tell whether the email has an account.
+            $sent = false;
+            if ($user->canSignIn()) {
+                try {
+                    $sent = Password::broker()->sendResetLink(['email' => $email]) === Password::RESET_LINK_SENT;
+                } catch (Throwable $e) {
+                    Log::error('Password reset email failed: '.$e->getMessage(), ['user_id' => $user->getKey()]);
+                }
+            }
 
             $audit->log('auth.password_reset_requested', $user, null, ['sent' => $sent]);
         }
