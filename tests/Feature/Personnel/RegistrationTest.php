@@ -11,30 +11,7 @@ use App\Modules\Records\Models\AuditLog;
 use App\Modules\Records\Models\ConsentRecord;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Testing\TestResponse;
-
-/** Records every message instead of sending it, so tests can read the code. */
-class FakeMailSender implements MailSender
-{
-    /** @var list<array{to: string, subject: string, body: string}> */
-    public array $sent = [];
-
-    public bool $fail = false;
-
-    public function send(string $toEmail, string $toName, string $subject, string $body): void
-    {
-        if ($this->fail) {
-            throw new RuntimeException('smtp down');
-        }
-        $this->sent[] = ['to' => $toEmail, 'subject' => $subject, 'body' => $body];
-    }
-
-    public function lastCode(): string
-    {
-        preg_match('/code is (\d{6})/', (string) end($this->sent)['body'], $m);
-
-        return $m[1];
-    }
-}
+use Tests\Support\FakeMailSender;
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);

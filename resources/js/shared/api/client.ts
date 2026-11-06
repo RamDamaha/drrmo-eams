@@ -6,6 +6,8 @@ export class ApiError extends Error {
     constructor(
         public status: number,
         public body: unknown,
+        // Seconds from the Retry-After header, when the server sent one.
+        public retryAfter?: number,
     ) {
         super(`API error ${status}`);
     }
@@ -82,6 +84,13 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     }
 
     const body = response.status === 204 ? null : await response.json().catch(() => null);
-    if (!response.ok) throw new ApiError(response.status, body);
+    if (!response.ok) {
+        const retry = Number(response.headers.get('Retry-After'));
+        throw new ApiError(
+            response.status,
+            body,
+            Number.isFinite(retry) && retry > 0 ? retry : undefined,
+        );
+    }
     return body as T;
 }
