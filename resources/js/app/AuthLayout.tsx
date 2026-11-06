@@ -127,7 +127,10 @@ export function AuthLayout({
             <div className="min-h-dvh bg-white lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
                 <BrandPanel />
 
-                <main className="relative -mt-5 rounded-t-[1.25rem] bg-white px-6 pt-8 pb-10 sm:px-10 lg:mt-0 lg:flex lg:flex-col lg:rounded-none lg:px-14 lg:py-12">
+                <main
+                    tabIndex={-1}
+                    className="relative -mt-5 outline-none rounded-t-[1.25rem] bg-white px-6 pt-8 pb-10 sm:px-10 lg:mt-0 lg:flex lg:flex-col lg:rounded-none lg:px-14 lg:py-12"
+                >
                     <div className="mx-auto w-full max-w-sm sm:max-w-xl lg:my-auto lg:max-w-sm">
                         <div className="brand-stripe h-1 w-12 rounded-full" aria-hidden="true" />
                         <h1 className="mt-5 text-2xl font-semibold tracking-tight text-stone-900 sm:text-[1.75rem]">
@@ -158,8 +161,13 @@ export function AuthLayout({
                                 10173). Location is only shared while you are on duty.
                             </p>
                         </div>
-                        <p className="mt-4 text-[0.8125rem]">
-                            <AuthLink to="/cookies">Cookie notice</AuthLink>
+                        <p className="mt-3 pl-7 text-[0.8125rem]">
+                            <Link
+                                to="/cookies"
+                                className="text-stone-500 underline underline-offset-2 hover:text-stone-700"
+                            >
+                                Cookie notice
+                            </Link>
                         </p>
                     </div>
 

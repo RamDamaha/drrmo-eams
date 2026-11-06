@@ -43,7 +43,7 @@ describe('cookie banner', () => {
         renderAt('/login');
 
         const banner = await screen.findByRole('region', { name: 'Cookie notice' });
-        expect(banner).toHaveTextContent('No tracking, no ads.');
+        expect(banner).toHaveTextContent('We do not track you or show ads.');
         expect(screen.getByRole('button', { name: 'Got it' })).toBeInTheDocument();
         expect(screen.getByRole('link', { name: 'Read the cookie notice' })).toHaveAttribute(
             'href',
@@ -63,6 +63,13 @@ describe('cookie banner', () => {
         renderAt('/login');
         await screen.findByRole('button', { name: 'Sign in' });
         expect(screen.queryByRole('region', { name: 'Cookie notice' })).not.toBeInTheDocument();
+    });
+
+    it('moves keyboard focus to the main content after Got it', async () => {
+        renderAt('/login');
+        fireEvent.click(await screen.findByRole('button', { name: 'Got it' }));
+
+        expect(document.activeElement).toBe(screen.getByRole('main'));
     });
 
     it('stores the choice in local storage, never in a cookie', async () => {
