@@ -12,6 +12,8 @@ One page to get up to speed. Details live in the linked documents.
 - Every merged story adds a DEV_LOG entry and updates the data dictionary or API reference (docs/DOCUMENTATION_GUIDE.md).
 
 **Decisions made**
+- Auth: JWT (owner decision, 6 Nov 2026) instead of Sanctum sessions. Access JWT and rotating refresh token, both in HttpOnly cookies, never in localStorage. See ARCHITECTURE.md section 3.
+- Sign up: public "Request access" for volunteers only, with an emailed 6 digit code and admin approval before the account works (owner decision, 6 Nov 2026). Planned after the JWT story.
 - Data protection officer: the DRRMO head for now.
 - Hosting: localhost for now. Free Oracle VM or school server later, after the project is finished.
 - Map tiles: OpenStreetMap by default (no key). ArcGIS satellite can be switched on later with an optional key.

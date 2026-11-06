@@ -68,7 +68,7 @@ sudo mysql -e "CREATE USER 'drrmo'@'localhost' IDENTIFIED BY '<strong password>'
 sudo mysql -e "GRANT ALL ON drrmo_eams.* TO 'drrmo'@'localhost';"
 ```
 
-Shared `.env` at `/var/www/drrmo/shared/.env` (copy from `.env.example`, then change): `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://<domain>`, DB credentials, `SESSION_SECURE_COOKIE=true`, `SANCTUM_STATEFUL_DOMAINS=<domain>`, SMTP settings, `VITE_ARCGIS_API_KEY` if used. Run `php artisan key:generate --show` once and paste the key. `chmod 640` the file.
+Shared `.env` at `/var/www/drrmo/shared/.env` (copy from `.env.example`, then change): `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://<domain>`, DB credentials, `JWT_SECURE_COOKIES=true`, `AUTH_ALLOWED_ORIGINS=https://<domain>`, a `JWT_SECRET` from `php artisan jwt:secret --show`, SMTP settings, `VITE_ARCGIS_API_KEY` if used. Run `php artisan key:generate --show` once and paste the key. `chmod 640` the file.
 
 Nginx, supervisor and cron: copy the files in `deploy/` to the paths written at the top of each file, then:
 

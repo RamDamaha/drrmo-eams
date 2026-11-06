@@ -54,10 +54,7 @@ describe('forgot password', () => {
     });
 
     it('shows the same message whatever the email is', async () => {
-        const fetchMock = vi.fn((url: string) => {
-            if (url === '/sanctum/csrf-cookie') return json(204, null);
-            return json(200, { message: sameAnswer });
-        });
+        const fetchMock = vi.fn(() => json(200, { message: sameAnswer }));
         vi.stubGlobal('fetch', fetchMock);
         renderAt('/forgot-password');
 
@@ -75,9 +72,7 @@ describe('forgot password', () => {
     it('says to wait after too many requests', async () => {
         vi.stubGlobal(
             'fetch',
-            vi.fn((url: string) =>
-                url === '/sanctum/csrf-cookie' ? json(204, null) : json(429, {}),
-            ),
+            vi.fn(() => json(429, {})),
         );
         renderAt('/forgot-password');
 
@@ -102,10 +97,9 @@ describe('reset password', () => {
     }
 
     it('sends the token, email and new password, then points to sign in', async () => {
-        const fetchMock = vi.fn((url: string) => {
-            if (url === '/sanctum/csrf-cookie') return json(204, null);
-            return json(200, { message: 'Your password has been changed. You can sign in now.' });
-        });
+        const fetchMock = vi.fn(() =>
+            json(200, { message: 'Your password has been changed. You can sign in now.' }),
+        );
         vi.stubGlobal('fetch', fetchMock);
         renderAt(link);
 
@@ -141,11 +135,7 @@ describe('reset password', () => {
     it('explains an expired or used link', async () => {
         vi.stubGlobal(
             'fetch',
-            vi.fn((url: string) =>
-                url === '/sanctum/csrf-cookie'
-                    ? json(204, null)
-                    : json(422, { code: 'invalid_reset_link' }),
-            ),
+            vi.fn(() => json(422, { code: 'invalid_reset_link' })),
         );
         renderAt(link);
 

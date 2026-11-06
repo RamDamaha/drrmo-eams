@@ -3,19 +3,19 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Modules\Access\Models\RefreshToken;
 use App\Modules\Personnel\Models\User;
 use App\Modules\Records\Models\AuditLog;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Auth\Notifications\ResetPassword;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
 
-// Requests must look like they come from the SPA so Sanctum starts a session.
+// Requests must look like they come from the app (VerifyApiRequestOrigin).
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
-    $this->withHeaders(['Referer' => 'http://localhost']);
+    $this->withHeaders(['Referer' => 'http://localhost', 'X-Requested-With' => 'XMLHttpRequest']);
     Notification::fake();
 });
 
@@ -89,24 +89,22 @@ it('allows 3 forgot password requests per 10 minutes per IP', function () {
     $this->postJson('/api/forgot-password', ['email' => 'person5@example.test'])->assertOk();
 });
 
-it('sets a new password, ends every session and writes an audit row', function () {
+it('sets a new password, signs out every device and writes an audit row', function () {
     $user = User::factory()->create();
+    $oldPhone = loginCookies($user);
     $token = Password::broker()->createToken($user);
-    DB::table('sessions')->insert([
-        'id' => 'old-phone-session',
-        'user_id' => $user->id,
-        'ip_address' => '10.0.0.5',
-        'user_agent' => 'test',
-        'payload' => '',
-        'last_activity' => now()->getTimestamp(),
-    ]);
 
+    $this->travel(1)->seconds();
     resetWith(['token' => $token, 'email' => $user->email])->assertOk();
 
     $user->refresh();
     expect(Hash::check('a-new-long-password', $user->password))->toBeTrue()
-        ->and(DB::table('sessions')->where('user_id', $user->id)->count())->toBe(0)
+        ->and(RefreshToken::query()->where('user_id', $user->id)->whereNull('revoked_at')->count())->toBe(0)
         ->and(AuditLog::query()->where('action', 'auth.password_reset_completed')->where('entity_id', $user->id)->exists())->toBeTrue();
+
+    // The old phone's access token and refresh token both stop working.
+    withAuthCookies($oldPhone)->getJson('/api/me')->assertUnauthorized();
+    withAuthCookies($oldPhone)->postJson('/api/refresh')->assertUnauthorized();
 
     $this->postJson('/api/login', ['email' => $user->email, 'password' => 'a-new-long-password'])->assertOk();
 });

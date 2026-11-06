@@ -84,3 +84,13 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Decision and why: both requests are rate limited per IP (3 and 10 per 10 minutes) and write audit rows (auth.password_reset_requested, auth.password_reset_completed)
 - Evidence: tests/Feature/Core/PasswordResetTest.php, resources/js/pages/PasswordReset.test.tsx
 - Paper: Chapter 3 (account security), Chapter 4 (forgot and reset password screens)
+
+## 2026-11-06 · JWT auth in HttpOnly cookies (core, access)
+- What was built: a JWT guard (`auth:api`) with a 15 minute access token and a 7 day rotating refresh token, POST /api/refresh, logout that revokes, a `refresh_tokens` table, a CSRF origin check, a `jwt:secret` command, and a client that refreshes once on a 401 and retries
+- Decision and why: the owner asked for JWT instead of the planned Sanctum sessions. The tokens are kept in HttpOnly, SameSite=Lax cookies, never in localStorage, so a script injected into a page cannot steal them
+- Decision and why: the access token is short (15 minutes) because a JWT cannot be called back once issued. Logout and password reset still cut it off through a denylist in the cache
+- Decision and why: refresh tokens are stored only as hashes and rotate on every use. Using an old one again means it was copied, so the whole sign in is revoked and audited. A 30 second grace lets two open tabs refresh at the same moment
+- Decision and why: cookie auth needs CSRF protection, so every state changing call must carry `X-Requested-With` and come from an allowed origin
+- Decision and why: Sanctum was removed because nothing else used it. Policies, gates and the permission matrix did not change
+- Evidence: tests/Feature/Core/JwtAuthTest.php (cookies, refresh, reuse, logout, forged and alg none tokens, disabled accounts, origin check), resources/js/shared/api/client.test.ts
+- Paper: Chapter 3 (authentication design and its trade offs), Chapter 4 (security tests)

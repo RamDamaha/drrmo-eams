@@ -79,7 +79,7 @@ DB_HOST=127.0.0.1
 DB_USERNAME=root
 DB_PASSWORD=
 MAIL_MAILER=log
-SANCTUM_STATEFUL_DOMAINS=localhost,localhost:8000,localhost:5173,127.0.0.1,127.0.0.1:8000
+AUTH_ALLOWED_ORIGINS=http://127.0.0.1:8000,http://localhost:8000
 ```
 
 5. In the project folder run:
@@ -88,6 +88,7 @@ SANCTUM_STATEFUL_DOMAINS=localhost,localhost:8000,localhost:5173,127.0.0.1,127.0
 composer install
 npm install
 php artisan key:generate
+php artisan jwt:secret
 php artisan migrate --seed
 php artisan db:seed --class=DemoSeeder
 ```
@@ -109,7 +110,7 @@ Run checks with `composer check` and `npm run check`. Note: XAMPP ships MariaDB 
 
 | Part | Choice |
 |---|---|
-| Backend | Laravel 13 (PHP 8.3+), Sanctum SPA cookie auth, Gates and Policies, database queue and scheduler |
+| Backend | Laravel 13 (PHP 8.3+), JWT auth in HttpOnly cookies (firebase/php-jwt), Gates and Policies, database queue and scheduler |
 | Frontend | React 19, React Router 7, TanStack Query 5, Tailwind CSS 4, Vite 8, TypeScript |
 | Map | Leaflet 1.9 with Esri World Imagery and OpenStreetMap |
 | Database | MySQL 8 |

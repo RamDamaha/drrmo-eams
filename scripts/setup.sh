@@ -28,6 +28,7 @@ echo "Waiting for MySQL..."
 until ./vendor/bin/sail exec -T mysql mysqladmin ping -ppassword --silent >/dev/null 2>&1; do sleep 2; done
 
 grep -q '^APP_KEY=base64' .env || ./vendor/bin/sail artisan key:generate
+grep -q '^JWT_SECRET=base64' .env || ./vendor/bin/sail artisan jwt:secret
 ./vendor/bin/sail artisan migrate --seed
 ./vendor/bin/sail npm install
 ./vendor/bin/sail npm run build

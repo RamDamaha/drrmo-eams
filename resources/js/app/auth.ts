@@ -33,7 +33,6 @@ export function useMe() {
 
 // Asks for a reset link. The server answers the same way whether or not the email has an account.
 export async function requestPasswordReset(email: string): Promise<string> {
-    await fetch('/sanctum/csrf-cookie', { credentials: 'same-origin' });
     const body = await api<{ message: string }>('/api/forgot-password', {
         method: 'POST',
         body: JSON.stringify({ email }),
@@ -48,9 +47,8 @@ export interface NewPassword {
     password_confirmation: string;
 }
 
-// Sets a new password from the emailed link. The server then ends every session for the account.
+// Sets a new password from the emailed link. The server then signs the account out everywhere.
 export async function resetPassword(input: NewPassword): Promise<string> {
-    await fetch('/sanctum/csrf-cookie', { credentials: 'same-origin' });
     const body = await api<{ message: string }>('/api/reset-password', {
         method: 'POST',
         body: JSON.stringify(input),
@@ -62,7 +60,6 @@ export function useAuthActions() {
     const queryClient = useQueryClient();
 
     async function login(email: string, password: string): Promise<Me> {
-        await fetch('/sanctum/csrf-cookie', { credentials: 'same-origin' });
         const body = await api<{ data: Me }>('/api/login', {
             method: 'POST',
             body: JSON.stringify({ email, password }),

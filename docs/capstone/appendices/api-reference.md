@@ -1,13 +1,16 @@
 # API Reference
 
-Filled in per milestone. See ../../DOCUMENTATION_GUIDE.md. All endpoints are under `/api`, send and return JSON, and use the Sanctum session cookie. Call `GET /sanctum/csrf-cookie` once before the first POST.
+Filled in per milestone. See ../../DOCUMENTATION_GUIDE.md. All endpoints are under `/api` and send and return JSON.
+
+Auth uses two HttpOnly cookies set by the server: `drrmo_access` (a JWT, 15 minutes) and `drrmo_refresh` (7 days, rotates on every use). Page scripts never read them. Every POST, PUT, PATCH and DELETE must send `X-Requested-With: XMLHttpRequest` and come from an allowed origin, or it gets 403 `bad_origin`. A signed-in endpoint answers 401 when the access token is missing, expired or revoked. The app then calls `POST /api/refresh` once and retries.
 
 ## Auth (Core)
 
 | Method and path | Who | Request | Response |
 |---|---|---|---|
-| `POST /api/login` | anyone | `email`, `password` | 200 with the same body as `/api/me`. 422 `invalid_credentials` for a wrong password or a disabled account. 429 `too_many_attempts` after 5 failures in a minute for the same email and IP |
-| `POST /api/logout` | signed in | none | 204 |
+| `POST /api/login` | anyone | `email`, `password` | 200 with the same body as `/api/me`, and both auth cookies. 422 `invalid_credentials` for a wrong password or a disabled account. 429 `too_many_attempts` after 5 failures in a minute for the same email and IP |
+| `POST /api/refresh` | anyone with a refresh cookie | none | 204 with new access and refresh cookies. 401 `session_ended` (and both cookies cleared) when the refresh token is missing, expired, revoked, reused or belongs to a disabled account. 429 after 30 calls in a minute from the same IP |
+| `POST /api/logout` | anyone | none | 204. Revokes the refresh token family, denylists the access token and clears both cookies. Also works with an expired access token |
 | `POST /api/forgot-password` | anyone | `email` | 200 with `message`. The same answer whether or not the email has an account. A disabled account gets no email. 422 for a missing or malformed email. 429 `too_many_attempts` after 3 requests in 10 minutes from the same IP |
-| `POST /api/reset-password` | anyone with a link | `token`, `email`, `password`, `password_confirmation` | 200 with `message`. The password needs at least 12 characters. Every session of the account ends. 422 `invalid_reset_link` for a wrong, used or expired (over 60 minutes) link, an unknown email or a disabled account. 422 with `errors.password` for a weak or mismatched password. 429 `too_many_attempts` after 10 tries in 10 minutes from the same IP |
-| `GET /api/me` | signed in | none | 200 with `data`: `id`, `name`, `email`, `role`, `team`, `status`, `permissions` (list of codes), `consent.privacy_notice`, `consent.location_tracking`, `home` (`/admin` or `/me`) |
+| `POST /api/reset-password` | anyone with a link | `token`, `email`, `password`, `password_confirmation` | 200 with `message`. The password needs at least 12 characters. The account is signed out everywhere. 422 `invalid_reset_link` for a wrong, used or expired (over 60 minutes) link, an unknown email or a disabled account. 422 with `errors.password` for a weak or mismatched password. 429 `too_many_attempts` after 10 tries in 10 minutes from the same IP |
+| `GET /api/me` | signed in | none | 200 with `data`: `id`, `name`, `email`, `role`, `team`, `status`, `permissions` (list of codes), `consent.privacy_notice`, `consent.location_tracking`, `home` (`/admin` or `/me`). 401 when not signed in |

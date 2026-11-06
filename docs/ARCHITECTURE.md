@@ -42,35 +42,45 @@ The queue uses the database driver, so there is no Redis to run. Cache and sessi
 
 1. The browser loads `/` (or any app path). Laravel returns one Blade view that loads the Vite build.
 2. React Router picks the page. The role in `/api/me` decides the default layout.
-3. Pages call `/api/...` with `fetch` through one small client in `resources/js/shared/api`. The session cookie and the `X-XSRF-TOKEN` header go with every call.
-4. Laravel runs middleware: `auth:sanctum`, `consented` (blocks everything except consent and logout until consent is given), throttle.
+3. Pages call `/api/...` with `fetch` through one small client in `resources/js/shared/api`. The two auth cookies and the `X-Requested-With: XMLHttpRequest` header go with every call. On a 401 the client refreshes once and tries again.
+4. Laravel runs middleware: `VerifyApiRequestOrigin` (CSRF check for state changing calls), `auth:api` (the JWT guard), `consented` (blocks everything except consent and logout until consent is given), throttle.
 5. A Form Request validates input. A Policy or Gate decides access. A single-purpose Action class does the work and writes the audit entry when needed.
 6. An API Resource shapes the JSON. Lists are paginated (25 per page by default).
 
-## 3. Auth flow (Sanctum SPA cookie)
+## 3. Auth flow (JWT in HttpOnly cookies)
 
-Because the React app and the API share one domain, Sanctum uses the normal Laravel session cookie. No tokens are stored in the browser.
+The owner chose JWT on 6 Nov 2026, replacing the first plan of Sanctum session cookies. To keep it as safe as a session cookie, the tokens never touch page scripts or `localStorage`. Both travel only in cookies that JavaScript cannot read.
+
+- **Access token:** a JWT signed with HS256 and a dedicated `JWT_SECRET` (not `APP_KEY`). Claims: `iss`, `aud`, `sub` (user id), `iat`, `nbf`, `exp`, `jti`, and a `kid` header for key rotation. It lives 15 minutes. Cookie `drrmo_access`.
+- **Refresh token:** 64 random characters, valid 7 days, stored only as a SHA-256 hash in `refresh_tokens` (Access module). Cookie `drrmo_refresh`.
+- **Cookies:** `HttpOnly`, `SameSite=Lax`, path `/api`, and `Secure` in production (`JWT_SECURE_COOKIES=true`).
+- **CSRF:** every state changing call must send `X-Requested-With: XMLHttpRequest` and come from an origin in `AUTH_ALLOWED_ORIGINS`. Another site cannot add that header without a CORS preflight, which we never allow. SameSite=Lax is a second layer.
+- **Rotation:** each refresh marks the old token used and issues the next one in the same family. Using an old token again after 30 seconds means it was copied, so the whole family is revoked and `auth.token_reuse_detected` is audited. The 30 second grace lets two open tabs refresh at once.
+- **Logout:** revokes the refresh family, denylists the access token `jti` in the cache until it expires, and clears both cookies. It works even with an expired access token, so signing out never gets stuck.
+- **Password reset:** revokes every refresh token of the account and refuses every access token issued before the reset.
+- **Disabled accounts:** refused at login, at refresh, and on every request, even with a token that has not expired.
+- A long shift is not a problem: the app refreshes the access token in the background for up to 7 days of use.
 
 ```mermaid
 sequenceDiagram
     participant B as Browser
     participant L as Laravel
-    B->>L: GET /sanctum/csrf-cookie
-    L-->>B: XSRF-TOKEN cookie
-    B->>L: POST /api/login (email, password, X-XSRF-TOKEN)
-    L->>L: throttle 5 per minute, check password
-    L-->>B: session cookie (HttpOnly, Secure, SameSite=Lax)
+    B->>L: POST /api/login (email, password, X-Requested-With)
+    L->>L: origin check, throttle 5 per minute, check password
+    L-->>B: drrmo_access (15 min) and drrmo_refresh (7 days) cookies, HttpOnly
     B->>L: GET /api/me
     L-->>B: user, role, permissions, consent status
-    alt no consent yet
-        B->>B: show privacy notice
-        B->>L: POST /api/consents
-    end
+    Note over B,L: 15 minutes later
+    B->>L: GET /api/me
+    L-->>B: 401
+    B->>L: POST /api/refresh (refresh cookie)
+    L->>L: mark old token used, issue next in the family
+    L-->>B: new access and refresh cookies
+    B->>L: GET /api/me (retry once)
+    L-->>B: 200
 ```
 
 - Admin creates accounts. The person receives a "set your password" email (Laravel password reset broker).
-- Session lifetime: 8 hours of inactivity (`SESSION_LIFETIME=480`), so a long shift does not log anyone out. Laravel uses one lifetime for everyone, which keeps this simple.
-- Logout invalidates the session and regenerates the CSRF token.
 
 ## 4. Queue and scheduler jobs
 
