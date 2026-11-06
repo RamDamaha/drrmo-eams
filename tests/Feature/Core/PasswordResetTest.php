@@ -4,19 +4,22 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Modules\Access\Models\RefreshToken;
+use App\Modules\Notifications\Contracts\MailSender;
+use App\Modules\Personnel\Enums\AccountStatus;
 use App\Modules\Personnel\Models\User;
 use App\Modules\Records\Models\AuditLog;
 use Database\Seeders\PermissionSeeder;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
+use Tests\Support\FakeMailSender;
 
 // Requests must look like they come from the app (VerifyApiRequestOrigin).
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
     $this->withHeaders(['Referer' => 'http://localhost', 'X-Requested-With' => 'XMLHttpRequest']);
-    Notification::fake();
+    $this->mail = new FakeMailSender;
+    $this->app->instance(MailSender::class, $this->mail);
 });
 
 function resetWith(array $overrides = [])
@@ -27,48 +30,84 @@ function resetWith(array $overrides = [])
     ], $overrides));
 }
 
-it('sends a reset link to an existing account', function () {
+it('emails a reset link to an active account through the mail sender', function () {
     $user = User::factory()->create();
 
     $this->postJson('/api/forgot-password', ['email' => $user->email])
         ->assertOk()
         ->assertJsonPath('message', ForgotPasswordController::MESSAGE);
 
-    Notification::assertSentTo($user, ResetPassword::class);
+    expect($this->mail->sent)->toHaveCount(1)
+        ->and($this->mail->sent[0]['to'])->toBe($user->email)
+        ->and($this->mail->sent[0]['subject'])->toBe('Reset your DRRMO EAMS password')
+        ->and($this->mail->sent[0]['body'])->toContain("Hello {$user->name}");
     expect(AuditLog::query()->where('action', 'auth.password_reset_requested')->where('entity_id', $user->id)->value('meta'))
         ->toBe(['sent' => true]);
 });
 
 it('gives the same answer for an unknown email and sends nothing', function () {
-    $this->postJson('/api/forgot-password', ['email' => 'nobody@example.test'])
-        ->assertOk()
-        ->assertJsonPath('message', ForgotPasswordController::MESSAGE);
+    $known = User::factory()->create();
+    $known = test()->postJson('/api/forgot-password', ['email' => $known->email]);
+    $unknown = test()->postJson('/api/forgot-password', ['email' => 'nobody@example.test']);
 
-    Notification::assertNothingSent();
+    expect($unknown->status())->toBe($known->status())->and($unknown->json())->toBe($known->json());
+    expect(collect($this->mail->sent)->pluck('to')->all())->not->toContain('nobody@example.test');
 });
 
-it('never sends a link to a disabled account', function () {
-    $user = User::factory()->disabled()->create();
+it('never sends a link to a disabled, pending or rejected account, and answers the same', function (string $kind) {
+    $user = match ($kind) {
+        'disabled' => User::factory()->disabled()->create(),
+        'pending_email' => User::factory()->accountStatus(AccountStatus::PendingEmail)->create(),
+        'pending_approval' => User::factory()->accountStatus(AccountStatus::PendingApproval)->create(),
+        'rejected' => User::factory()->accountStatus(AccountStatus::Rejected)->create(),
+    };
 
     $this->postJson('/api/forgot-password', ['email' => $user->email])
         ->assertOk()
         ->assertJsonPath('message', ForgotPasswordController::MESSAGE);
 
-    Notification::assertNothingSent();
+    expect($this->mail->sent)->toBe([]);
+    expect(AuditLog::query()->where('action', 'auth.password_reset_requested')->value('meta'))->toBe(['sent' => false]);
+})->with(['disabled', 'pending_email', 'pending_approval', 'rejected']);
+
+it('keeps the same answer when the email cannot be sent, and logs the failure', function () {
+    Log::spy();
+    $this->mail->fail = true;
+    $user = User::factory()->create();
+
+    $this->postJson('/api/forgot-password', ['email' => $user->email])
+        ->assertOk()
+        ->assertJsonPath('message', ForgotPasswordController::MESSAGE);
+
+    Log::shouldHaveReceived('error')->withArgs(fn (string $message) => str_starts_with($message, 'Password reset email failed: smtp down'))->once();
     expect(AuditLog::query()->where('action', 'auth.password_reset_requested')->value('meta'))->toBe(['sent' => false]);
 });
 
-it('points the emailed link at the reset screen', function () {
+it('points the emailed link at the reset screen and the link works', function () {
     $user = User::factory()->create();
 
     $this->postJson('/api/forgot-password', ['email' => $user->email])->assertOk();
 
-    Notification::assertSentTo($user, ResetPassword::class, function (ResetPassword $notification) use ($user) {
-        $url = $notification->toMail($user)->actionUrl;
+    $link = $this->mail->lastLink();
+    expect($link)->toStartWith(url('/reset-password').'?token=')
+        ->and($link)->toContain('email='.urlencode($user->email));
 
-        return str_starts_with($url, url('/reset-password').'?token='.$notification->token)
-            && str_contains($url, 'email='.urlencode($user->email));
-    });
+    parse_str((string) parse_url($link, PHP_URL_QUERY), $query);
+    $this->travel(1)->seconds();
+    resetWith(['token' => $query['token'], 'email' => $query['email']])->assertOk();
+    $this->postJson('/api/login', ['email' => $user->email, 'password' => 'a-new-long-password'])->assertOk();
+});
+
+it('sends one link a minute per account', function () {
+    $user = User::factory()->create();
+
+    $this->postJson('/api/forgot-password', ['email' => $user->email])->assertOk();
+    $this->postJson('/api/forgot-password', ['email' => $user->email])->assertOk();
+    expect($this->mail->sent)->toHaveCount(1);
+
+    $this->travel(61)->seconds();
+    $this->postJson('/api/forgot-password', ['email' => $user->email])->assertOk();
+    expect($this->mail->sent)->toHaveCount(2);
 });
 
 it('rejects a missing or malformed email', function () {
