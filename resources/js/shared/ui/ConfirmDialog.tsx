@@ -69,7 +69,7 @@ export function ConfirmDialog({
             aria-describedby={bodyId}
             onCancel={handleCancel}
             onClick={handleClick}
-            className="animate-dialog-in m-0 mt-auto w-full max-w-none rounded-t-sheet bg-white p-0 text-stone-600 shadow-raised backdrop:animate-backdrop-in backdrop:bg-stone-950/40 sm:m-auto sm:max-w-sm sm:rounded-card"
+            className="animate-dialog-in outline-none m-0 mt-auto w-full max-w-none rounded-t-sheet bg-white p-0 text-stone-600 shadow-raised backdrop:animate-backdrop-in backdrop:bg-stone-950/40 sm:m-auto sm:max-w-sm sm:rounded-card"
         >
             <div className="p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-6">
                 <h2 id={titleId} className="text-lg font-semibold text-stone-900">
