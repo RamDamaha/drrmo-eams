@@ -37,3 +37,31 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Decision and why: consent is a history of rows, and the latest row decides, so withdrawal does not erase the earlier consent
 - Evidence: tests/Feature/Records, PR #52
 - Paper: Chapter 3 (data privacy handling), Chapter 4 (security results)
+
+## 2026-11-05 · S1.1 Log in and log out, screen side (core)
+- What was built: phone-friendly login page, a `useMe` hook, route guards that keep signed-out visitors on /login and send admins to /admin and everyone else to /me
+- Decision and why: the area guard compares the `home` value from /api/me instead of repeating role rules in React, so the server stays the single place that decides who goes where
+- Decision and why: tests use plain Testing Library events because adding a user-event package is a separate Core change
+- Evidence: resources/js/pages/Login.test.tsx
+- Paper: Chapter 4 (login screen, add screenshot at 375 px width)
+
+## 2026-11-05 · Demo users for local testing (personnel)
+- What was built: DemoSeeder with four fake people (admin, marshal, volunteer, coordinator), all with the password "password"
+- Decision and why: the seeder refuses to run in production, so test accounts with a known password can never reach a real server
+- Evidence: tests/Feature/Personnel/DemoSeederTest.php
+
+## 2026-11-05 · Fixes found during the owner's local check of S1.1 (core)
+- What was built: a Sign out button in both layouts, a setup script that handles a root Ubuntu user and fails loudly, and a refreshed composer.lock hash
+- Problem met and fix: on the owner's Windows PC Ubuntu defaults to root, so the Sail container could not write project files and setup.sh stopped without a clear message. The script now gives the group write access when it runs as root and prints a clear message if any step fails
+- Problem met and fix: composer validate said the lock file was out of date. Only the content hash had drifted, so it was refreshed with no package changes
+- Evidence: Login.test.tsx (sign out test), composer validate output
+- Paper: Chapter 4 (testing on a real machine), Chapter 5 (limitations: setup differs per PC)
+
+## 2026-11-06 · Sign out after an ended session, and a setup without Docker (core)
+- What was built: Sign out now works when the session has already ended, and the README has a way to run the project without Docker
+- Problem met and fix: when the session had expired, /api/logout returned 401 and the Sign out button did nothing. Now 401 and 419 count as already signed out, so the user goes to /login
+- Decision and why: any other failure, such as a server error, shows "Could not sign out. Try again." and keeps the user signed in. Otherwise the screen would say signed out while the real session stays open on a shared phone
+- Problem met and fix: Docker used about 2.8 GB of memory on the owner's 16 GB PC. Herd (PHP 8.5) and the MariaDB from XAMPP use about 0.5 GB for the same work
+- Decision and why: MariaDB 10.4 is not MySQL 8, so the Docker setup and CI stay on MySQL 8 and still catch database differences. All migrations, seeders and 34 Pest tests passed on MariaDB 10.4 and PHP 8.5
+- Evidence: Login.test.tsx (401 and 500 sign out tests), README section "Run without Docker"
+- Paper: Chapter 4 (testing on a real machine), Chapter 5 (limitations: local database differs from the server)

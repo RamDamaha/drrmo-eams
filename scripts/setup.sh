@@ -4,9 +4,18 @@
 #   bash scripts/setup.sh
 set -euo pipefail
 
+trap 'echo; echo "Setup stopped because a step failed. Read the message above this line."; exit 1' ERR
+
 command -v docker >/dev/null || { echo "Docker is not available. Start Docker Desktop and enable WSL integration."; exit 1; }
 
 [ -f .env ] || cp .env.example .env
+
+# Ubuntu on some Windows PCs uses root as the default user. The Sail containers then
+# cannot write to the project files, so give the group write access first.
+if [ "$(id -u)" = "0" ]; then
+  echo "You are root in this shell. Making the project files writable for the containers."
+  chmod -R g+w .
+fi
 
 if [ ! -d vendor ]; then
   echo "Installing PHP packages (first run takes a few minutes)..."
