@@ -154,12 +154,56 @@ it('still answers when the email cannot be sent', function () {
     expect(User::query()->where('email', 'pending@example.test')->exists())->toBeTrue();
 });
 
-it('keeps pending and rejected accounts out with the usual wrong password message', function (AccountStatus $status) {
+it('tells a pending or rejected person why they cannot sign in, but only after the right password', function (AccountStatus $status, string $code, string $message) {
     $user = User::factory()->accountStatus($status)->create();
 
     $this->postJson('/api/login', ['email' => $user->email, 'password' => 'password'])
-        ->assertStatus(422)->assertJson(['code' => 'invalid_credentials', 'message' => 'The email or password is wrong.']);
+        ->assertStatus(403)->assertExactJson(['message' => $message, 'code' => $code]);
+    $this->getJson('/api/me')->assertUnauthorized();
+})->with([
+    'email not confirmed' => [AccountStatus::PendingEmail, 'email_not_confirmed', 'Confirm your email first. Enter the 6 digit code we sent you.'],
+    'waiting for approval' => [AccountStatus::PendingApproval, 'awaiting_approval', 'Your account is waiting for admin approval. We will email you when it is approved.'],
+    'rejected' => [AccountStatus::Rejected, 'request_rejected', 'Your access request was not approved. Contact the DRRMO office.'],
+]);
+
+it('gives a wrong password or an unknown email the generic message, whatever the account status', function (AccountStatus $status) {
+    $user = User::factory()->accountStatus($status)->create();
+    $generic = ['code' => 'invalid_credentials', 'message' => 'The email or password is wrong.'];
+
+    $this->postJson('/api/login', ['email' => $user->email, 'password' => 'not-the-password'])
+        ->assertStatus(422)->assertExactJson($generic);
+    $this->postJson('/api/login', ['email' => 'nobody@example.test', 'password' => 'password'])
+        ->assertStatus(422)->assertExactJson($generic);
 })->with([AccountStatus::PendingEmail, AccountStatus::PendingApproval, AccountStatus::Rejected]);
+
+it('does not sign anyone in or set cookies when the account is not usable', function () {
+    $user = User::factory()->accountStatus(AccountStatus::PendingApproval)->create();
+
+    $response = $this->postJson('/api/login', ['email' => $user->email, 'password' => 'password'])->assertStatus(403);
+
+    expect($this->authCookiesFrom($response))->toBe([]);
+    expect($user->fresh()->last_login_at)->toBeNull();
+});
+
+it('still throttles repeated tries on an account that cannot sign in yet', function () {
+    $user = User::factory()->accountStatus(AccountStatus::PendingApproval)->create();
+
+    foreach (range(1, 5) as $_) {
+        $this->postJson('/api/login', ['email' => $user->email, 'password' => 'password'])->assertStatus(403);
+    }
+
+    $this->postJson('/api/login', ['email' => $user->email, 'password' => 'password'])
+        ->assertStatus(429)->assertJsonPath('code', 'too_many_attempts');
+});
+
+it('lets the person in once an admin approves', function () {
+    $admin = User::factory()->role(RoleCode::Admin)->create();
+    $waiting = pendingApproval();
+
+    $this->postJson('/api/login', ['email' => $waiting->email, 'password' => 'password'])->assertStatus(403);
+    withAuthCookies(loginCookies($admin))->postJson("/api/admin/registrations/{$waiting->id}/approve")->assertOk();
+    $this->postJson('/api/login', ['email' => $waiting->email, 'password' => 'password'])->assertOk();
+});
 
 it('stops refreshing and using the app once an account is not active', function () {
     $user = User::factory()->create();
@@ -217,7 +261,7 @@ it('rejects a request with a reason that is kept, audited and emailed', function
     $log = AuditLog::query()->where('action', 'registration.rejected')->firstOrFail();
     expect($log->meta['reason'])->toBe('Not a ZPPSU volunteer');
     expect($this->mail->sent[0]['body'])->toContain('Not a ZPPSU volunteer');
-    $this->postJson('/api/login', ['email' => $waiting->email, 'password' => 'password'])->assertStatus(422);
+    $this->postJson('/api/login', ['email' => $waiting->email, 'password' => 'password'])->assertStatus(403)->assertJsonPath('code', 'request_rejected');
 });
 
 it('does not decide a request twice or before the email is confirmed', function () {

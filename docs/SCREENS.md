@@ -67,7 +67,7 @@ One tap starts one sign out. The label changes to "Signing out..." and the butto
 
 | Screen | Role | Phone layout | Desktop |
 |---|---|---|---|
-| M-Login | Everyone | Maroon header with the ZPPSU and DRRMO logos, office names and system name. White sheet below with email, password (show and hide), big Sign in button, a "Forgot your password?" link, and a data privacy note. | Two columns: brand panel left, form right |
+| M-Login | Everyone | Maroon header with the ZPPSU and DRRMO logos, office names and system name. White sheet below with email, password (show and hide), big Sign in button, a "Forgot your password?" link, a Request access link, a message box that explains why a correct password still cannot sign in (email not confirmed with a link to the code screen, waiting for approval, not approved, disabled), and a data privacy note. | Two columns: brand panel left, form right |
 | M-Request access | Everyone | Same frame as M-Login. First name, Last name, email, password and Confirm password (12 characters at least), a privacy notice checkbox and a Request access button. Link back to sign in. | Same as M-Login |
 | M-Confirm email | Everyone | Same frame as M-Login. A big 6 digit code field, Confirm email button, and a Send a new code button that waits 60 seconds. Explains the code works for 10 minutes. After 5 wrong tries the field locks until a new code is sent. | Same as M-Login |
 | M-Waiting for approval | Everyone | Same frame as M-Login. Says the email is confirmed and the office will review the request, and that an email follows. Back to sign in link. | Same as M-Login |
