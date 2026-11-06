@@ -1,23 +1,26 @@
+// App entry. Keep this file free of components: it only wires the providers and mounts the app.
+// A component defined here would make Vite's hot reload run this whole file a second time.
 import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot, type Root } from 'react-dom/client';
 import { RouterProvider } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useSessionWatcher } from './auth';
 import { router } from './router';
+import { SessionWatcher } from './SessionWatcher';
 
 const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
 });
 
-function SessionWatcher() {
-    useSessionWatcher();
-    return null;
-}
+const container = document.getElementById('app');
 
-const root = document.getElementById('app');
+if (container) {
+    // In development this file can be evaluated again. Reuse the same root instead of calling
+    // createRoot a second time on the same container, which breaks React's DOM bookkeeping.
+    const hotData = import.meta.hot?.data as { root?: Root } | undefined;
+    const root = hotData?.root ?? createRoot(container);
+    if (hotData) hotData.root = root;
 
-if (root) {
-    createRoot(root).render(
+    root.render(
         <StrictMode>
             <QueryClientProvider client={queryClient}>
                 <SessionWatcher />
