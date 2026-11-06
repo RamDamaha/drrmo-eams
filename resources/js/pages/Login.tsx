@@ -43,7 +43,10 @@ export function Login() {
     }
 
     return (
-        <AuthLayout title="Sign in" subtitle="Use the account given to you by the DRRMO office.">
+        <AuthLayout
+            title="Sign in"
+            subtitle="Use the account given to you by the DRRMO office, or one the office approved."
+        >
             <form onSubmit={submit} className="mt-8 space-y-5" noValidate>
                 <TextField
                     label="Email"
@@ -72,6 +75,9 @@ export function Login() {
 
             <p className="mt-5 text-sm">
                 <AuthLink to="/forgot-password">Forgot your password?</AuthLink>
+            </p>
+            <p className="mt-2 text-sm">
+                Volunteer without an account? <AuthLink to="/register">Request access</AuthLink>
             </p>
         </AuthLayout>
     );

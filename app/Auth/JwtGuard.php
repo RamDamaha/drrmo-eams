@@ -45,7 +45,7 @@ class JwtGuard implements Guard
 
         $user = $this->provider->retrieveById((int) $claims->sub);
         // A disabled account loses access at once, even with a token that has not expired.
-        if (! $user instanceof User || $user->isDisabled()) {
+        if (! $user instanceof User || ! $user->canSignIn()) {
             return null;
         }
 

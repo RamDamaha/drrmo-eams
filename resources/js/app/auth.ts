@@ -4,6 +4,9 @@ import { api, ApiError } from '@/shared/api/client';
 
 export interface Me {
     id: number;
+    first_name: string;
+    last_name: string;
+    // First and last name together, for display.
     name: string;
     email: string;
     role: 'admin' | 'marshal' | 'volunteer' | 'coordinator' | null;

@@ -26,7 +26,7 @@ class ResetPasswordController
         $user = User::query()->where('email', $email)->first();
 
         // A disabled account gets the same answer as a bad link.
-        $status = $user === null || $user->isDisabled() ? null : Password::broker()->reset(
+        $status = $user === null || ! $user->canSignIn() ? null : Password::broker()->reset(
             [
                 'email' => $email,
                 'token' => $request->string('token')->toString(),

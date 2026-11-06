@@ -45,8 +45,8 @@ class LoginController
 
         $user = User::query()->where('email', $email)->first();
 
-        // A disabled account gets the same answer as a wrong password.
-        if ($user === null || $user->isDisabled() || ! Hash::check($request->string('password')->toString(), $user->password)) {
+        // A disabled, pending or rejected account gets the same answer as a wrong password.
+        if ($user === null || ! $user->canSignIn() || ! Hash::check($request->string('password')->toString(), $user->password)) {
             RateLimiter::hit($key, 60);
 
             return $this->invalid();

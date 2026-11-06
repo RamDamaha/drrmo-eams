@@ -46,6 +46,18 @@ class AppServiceProvider extends ServiceProvider
         // Rate limits from docs/SECURITY_AND_PRIVACY.md section 6.
         RateLimiter::for('refresh', fn (Request $request) => Limit::perMinute(30)->by((string) $request->ip()));
 
+        RateLimiter::for('register', fn (Request $request) => Limit::perHour(5)
+            ->by((string) $request->ip())
+            ->response(fn () => $this->tooManyAttempts()));
+
+        RateLimiter::for('register-verify', fn (Request $request) => Limit::perMinutes(10, 10)
+            ->by((string) $request->ip())
+            ->response(fn () => $this->tooManyAttempts()));
+
+        RateLimiter::for('register-resend', fn (Request $request) => Limit::perMinutes(10, 3)
+            ->by((string) $request->ip())
+            ->response(fn () => $this->tooManyAttempts()));
+
         RateLimiter::for('forgot-password', fn (Request $request) => Limit::perMinutes(10, 3)
             ->by((string) $request->ip())
             ->response(fn () => $this->tooManyAttempts()));

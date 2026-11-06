@@ -52,7 +52,7 @@ class RefreshTokens
             }
 
             $user = $token->user;
-            if ($user === null || $user->isDisabled()) {
+            if ($user === null || ! $user->canSignIn()) {
                 $this->revokeFamily($token->family_id);
 
                 return null;

@@ -23,13 +23,13 @@ class DemoSeeder extends Seeder
         $this->call(PermissionSeeder::class);
 
         foreach ([
-            ['Demo Admin', 'admin@example.test', RoleCode::Admin],
-            ['Demo Marshal', 'marshal@example.test', RoleCode::Marshal],
-            ['Demo Volunteer', 'volunteer@example.test', RoleCode::Volunteer],
-            ['Demo Coordinator', 'coordinator@example.test', RoleCode::Coordinator],
-        ] as [$name, $email, $role]) {
+            ['Demo', 'Admin', 'admin@example.test', RoleCode::Admin],
+            ['Demo', 'Marshal', 'marshal@example.test', RoleCode::Marshal],
+            ['Demo', 'Volunteer', 'volunteer@example.test', RoleCode::Volunteer],
+            ['Demo', 'Coordinator', 'coordinator@example.test', RoleCode::Coordinator],
+        ] as [$first, $last, $email, $role]) {
             User::query()->where('email', $email)->exists()
-                || User::factory()->role($role)->create(['name' => $name, 'email' => $email]);
+                || User::factory()->role($role)->create(['first_name' => $first, 'last_name' => $last, 'email' => $email]);
         }
     }
 }
