@@ -77,3 +77,23 @@ Filled in per milestone. See ../../DOCUMENTATION_GUIDE.md. Types are shown as La
 | notice_version | string(32) | version of the notice agreed to |
 | consented_at, withdrawn_at | timestamp | withdrawn_at is empty while consent is active |
 | ip_address | string(45) | optional |
+
+## Auth tables
+
+### refresh_tokens (Access)
+One row per refresh token. A family is one sign in on one device; every refresh adds a row to the same family. The token itself is never stored.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | bigint | primary key |
+| user_id | foreign key | users, cascade on delete |
+| token_hash | char(64) | SHA-256 of the token, unique |
+| family_id | uuid | indexed. Reuse of an old token revokes the whole family |
+| expires_at | timestamp | 7 days after it was issued |
+| used_at | timestamp, nullable | set when it is swapped for the next token |
+| revoked_at | timestamp, nullable | set at logout, on reuse, on password reset or when the account is disabled |
+| ip_address | string(45), nullable | where it was issued |
+| user_agent | string(255), nullable | browser that received it |
+| created_at, updated_at | timestamps | |
+
+Index: (user_id, revoked_at) to revoke all of a user's tokens quickly.

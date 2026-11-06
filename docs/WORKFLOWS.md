@@ -41,7 +41,7 @@ Do this only when the work does not fit any of the seven modules. Most new featu
 
 **Code skeleton (same PR)**
 - [ ] `app/Modules/<Name>/` with the standard folders (see MODULES.md) and a README.
-- [ ] `app/Modules/<Name>/<Name>ServiceProvider.php` that loads `routes.php` under the `api` prefix with `auth:sanctum` middleware, and registers policies.
+- [ ] `app/Modules/<Name>/<Name>ServiceProvider.php` that loads `routes.php` under the `api` prefix with `auth:api` middleware, and registers policies.
 - [ ] Register the provider in `bootstrap/providers.php`.
 - [ ] Empty `routes.php`.
 - [ ] `resources/js/features/<name>/` with a README and an empty `routes.tsx`. Import it in `resources/js/app/router.tsx`.

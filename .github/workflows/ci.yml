@@ -64,6 +64,7 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate
+          php artisan jwt:secret
 
       - run: composer lint
       - run: composer analyse

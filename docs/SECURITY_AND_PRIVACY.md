@@ -75,7 +75,8 @@ Write an AUDIT_LOG row for:
 - Any view of location data: map load, trail view (one row per request, not per pin)
 - Any delete: memo, event, requirement, emergency contact
 - Any export: CSV lists, personal data export
-- Login failures above the throttle limit, password resets
+- Login, logout, login failures above the throttle limit, password resets
+- A refresh token used twice (`auth.token_reuse_detected`), which revokes that sign in
 - Consent given or withdrawn
 
 Audit rows are insert only. The app has no update or delete route for them, and the scheduled prune keeps them for 3 years.
@@ -83,8 +84,10 @@ Audit rows are insert only. The app has no update or delete route for them, and 
 ## 5. HTTPS, cookies and headers
 
 - HTTPS everywhere with Let's Encrypt. HTTP redirects to HTTPS. HSTS once the domain is stable.
-- `.env`: `SESSION_SECURE_COOKIE=true`, `SESSION_HTTP_ONLY=true`, `SESSION_SAME_SITE=lax`, `SESSION_DRIVER=database`, `SESSION_LIFETIME=480`, `SESSION_ENCRYPT=true`.
-- `SANCTUM_STATEFUL_DOMAINS` set to the real domain only. `APP_DEBUG=false` in production.
+- Auth is JWT in two HttpOnly, SameSite=Lax cookies. Page scripts never see a token (see ARCHITECTURE.md section 3).
+- `.env` in production: a long random `JWT_SECRET` (`php artisan jwt:secret`, never shared or committed), `JWT_SECURE_COOKIES=true`, `AUTH_ALLOWED_ORIGINS` set to the real https origin only, `APP_DEBUG=false`.
+- Changing `JWT_SECRET` signs everyone out. Do it if the secret may have leaked.
+- Access tokens last 15 minutes. Refresh tokens last 7 days, are stored only as hashes, rotate on every use, and a reused one revokes its whole sign in.
 - Headers from Nginx: `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin`, `X-Frame-Options: DENY`, a Content Security Policy that allows only our origin plus the two tile hosts for images.
 - `Permissions-Policy: geolocation=(self), camera=(self)`.
 
@@ -95,6 +98,7 @@ Audit rows are insert only. The app has no update or delete route for them, and 
 | `POST /api/login` | 5 per minute per email and IP |
 | `POST /api/forgot-password` | 3 per 10 minutes per IP, and one email per account per minute |
 | `POST /api/reset-password` | 10 per 10 minutes per IP |
+| `POST /api/refresh` | 30 per minute per IP |
 | `POST /api/me/assignments/{id}/pings` | 10 requests per minute per user, max 50 points per request |
 | `POST /api/me/report-slots/{id}` | 6 per minute per user |
 | Other API | 120 per minute per user |
@@ -110,7 +114,7 @@ Files get random names. Original names are kept only in the database. MIME type 
 
 ## 7. Breach response (short version)
 
-1. Contain: log everyone out by emptying the `sessions` table, rotate `APP_KEY` only if needed, change server and SMTP passwords.
+1. Contain: log everyone out by running `php artisan jwt:secret --force` (new signing secret) and setting `revoked_at` on every row of `refresh_tokens`, rotate `APP_KEY` only if needed, change server and SMTP passwords.
 2. Assess: use the audit log and server logs to find what data and whose.
 3. Notify: the university DPO, and the National Privacy Commission and affected people within 72 hours when the NPC rules require it (NPC Circular 16-03, confirm current rules with the DPO).
 4. Record: write what happened, what was done, and what changes to make.

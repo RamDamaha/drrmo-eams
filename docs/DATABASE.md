@@ -63,7 +63,7 @@ Each module gets a fixed timestamp prefix so parallel sessions never collide and
 | 1 | `2026_01_01_1000xx` | Access | roles, permissions, role_permission |
 | 2 | `2026_01_01_2000xx` | Personnel | departments, users (FK roles, departments), emergency_contacts, volunteer_status_logs |
 | 3 | `2026_01_01_3000xx` | Events | duty_types, campus_locations, events, event_duty_requirements, assignments |
-| 4 | `2026_01_01_3500xx` | Access | permission_grants (needs events) |
+| 4 | `2026_01_01_3500xx` | Access | refresh_tokens (needs users), permission_grants (needs events) |
 | 5 | `2026_01_01_4000xx` | Monitoring | location_pings, site_reports |
 | 6 | `2026_01_01_5000xx` | Notifications | notifications (needs assignments, site_reports) |
 | 7 | `2026_01_01_6000xx` | Information | memos, messages |

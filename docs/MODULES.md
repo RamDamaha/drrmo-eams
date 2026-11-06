@@ -64,7 +64,7 @@ Count: 4 + 4 + 5 + 1 + 2 + 2 + 2 = 20 tables. Each appears once.
 ## Core
 
 - **Owns:** app shell, Blade entry view, `bootstrap/app.php`, `routes/api.php` (which only includes module route files), auth endpoints, `/api/me`, the `EnsureConsented` middleware, layouts, UI kit, API client, PWA files, error handling.
-- **Endpoints:** `GET /sanctum/csrf-cookie`, `POST /api/login`, `POST /api/logout`, `POST /api/forgot-password`, `POST /api/reset-password`, `GET /api/me`.
+- **Endpoints:** `POST /api/login`, `POST /api/refresh`, `POST /api/logout`, `POST /api/forgot-password`, `POST /api/reset-password`, `GET /api/me`. Auth is the JWT guard (`auth:api`, app/Auth).
 - **Frontend:** `resources/js/app`, `resources/js/layouts`, `resources/js/shared`.
 - **Must not touch:** any module's business rules.
 - Note: `EnsureConsented` reads consent through the Records contract `ConsentChecker`.

@@ -74,7 +74,6 @@ describe('login flow', () => {
     it('signs in and lands on the phone area', async () => {
         const fetchMock = vi.fn((url: string) => {
             if (url === '/api/me') return json(401, {});
-            if (url === '/sanctum/csrf-cookie') return json(204, null);
             return json(200, { data: marshal });
         });
         vi.stubGlobal('fetch', fetchMock);
@@ -94,7 +93,6 @@ describe('login flow', () => {
             'fetch',
             vi.fn((url: string) => {
                 if (url === '/api/me') return json(401, {});
-                if (url === '/sanctum/csrf-cookie') return json(204, null);
                 return json(422, { code: 'invalid_credentials' });
             }),
         );
