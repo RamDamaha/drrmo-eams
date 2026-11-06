@@ -91,6 +91,16 @@ Write an AUDIT_LOG row for:
 
 Audit rows are insert only. The app has no update or delete route for them, and the scheduled prune keeps them for 3 years.
 
+## 4a. Signing out
+
+- One sign out path. The app asks `POST /api/logout`. The server revokes the whole refresh token family of that device, denylists the access token and clears both cookies with the exact attributes they were set with. It answers 204 even when nobody is signed in.
+- Only 401 and 419 count as "already signed out". Any other failure keeps the person signed in and shows "Could not sign out. Try again."
+- On success the app throws away every cached answer, not only the user record, and blocks the quiet refresh, so nothing signs the person back in and nothing of the old user can show for the next one.
+- A refresh that fails during normal use (the session was revoked, expired or ended in another tab) does the same: all state is cleared and the person lands on the login page.
+- Other open tabs hear about a sign out through a browser broadcast and go to the login page at once.
+- Every `/api` answer is sent with `Cache-Control: no-store, private`. A page restored by the Back button checks who is signed in again before it shows anything.
+- There is no idle timeout and no "sign out on every device" yet.
+
 ## 5. HTTPS, cookies and headers
 
 - HTTPS everywhere with Let's Encrypt. HTTP redirects to HTTPS. HSTS once the domain is stable.
