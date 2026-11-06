@@ -101,6 +101,20 @@ Audit rows are insert only. The app has no update or delete route for them, and 
 - Every `/api` answer is sent with `Cache-Control: no-store, private`. A page restored by the Back button checks who is signed in again before it shows anything.
 - There is no idle timeout and no "sign out on every device" yet.
 
+## 4b. Cookies and the cookie notice
+
+The system sets only essential cookies. There is no tracking, advertising or analytics cookie, so there is nothing optional to accept or reject. A public page at `/cookies` lists them, and a first visit message points to it.
+
+| Cookie | Purpose | Kept for |
+|---|---|---|
+| `drrmo_access` | Access token (JWT). HttpOnly | 15 minutes |
+| `drrmo_refresh` | Refresh token. HttpOnly, replaced on every use | 7 days |
+| `drrmo-eams-session` | Technical session cookie from the web framework, set when a page opens. It does not sign anyone in. HttpOnly | 8 hours |
+| `XSRF-TOKEN` | Technical protection token from the web framework | 8 hours |
+
+- That Got it was pressed is kept in the browser's local storage under `drrmo:cookie-notice:v1`, not in a cookie. Raise the version when the notice changes in a way people should see again.
+- `tests/Feature/Core/CookieNoticeTest.php` checks that the notice names exactly the cookies the server sets and states the real lifetimes. If a cookie is added or a lifetime changes, the test fails until the notice is updated.
+
 ## 5. HTTPS, cookies and headers
 
 - HTTPS everywhere with Let's Encrypt. HTTP redirects to HTTPS. HSTS once the domain is stable.

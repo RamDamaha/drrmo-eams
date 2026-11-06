@@ -185,6 +185,13 @@ All in `resources/js/shared/ui`. Add a new shared piece only when two screens ne
 - If the action fails, keep the dialog open and show an `Alert` with `tone="error"` above the buttons.
 - Closing returns focus to the button that opened it.
 
+**Notice banner** (`CookieBanner.tsx`)
+- For a one time notice that needs no choice, such as the cookie notice. It never blocks the page: no backdrop, no focus trap, and it does not take focus when it appears.
+- Phones: a white bar fixed to the bottom, full width, `border-t border-stone-200 shadow-raised`, bottom padding respects the safe area. Add a spacer at the end of the page so it never hides the last link.
+- 640 px and up: a floating card at the bottom right (`max-w-md rounded-card ring-1 ring-stone-200 shadow-raised p-5`), so it sits over the white side and never covers the maroon panel.
+- A short title, one or two sentences, a text link on the left and one `primary` button on the right ("Got it").
+- Remember the dismissal in local storage, not a cookie. After dismissal, move focus to `main`.
+
 **Cards**
 - `rounded-card bg-white ring-1 ring-stone-200 p-4` on phones, `p-6` on desktop.
 - On phones, the whole card is the tap target when it opens a detail screen.

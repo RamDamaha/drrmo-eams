@@ -95,6 +95,15 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Evidence: tests/Feature/Personnel/RegistrationTest.php (success, wrong, expired and locked codes, duplicate email, throttle, forbidden for non-admins, audit of approve and reject, pending cannot sign in), resources/js/pages/RequestAccess.test.tsx
 - Paper: Chapter 3 (registration and approval design), Chapter 4 (security tests)
 
+## 2026-11-06 · Cookie notice page and first visit message (core)
+- What was built: a public page at /cookies, a first visit message with a Got it button and a link to it, and a Cookie notice link in the footer of every signed out screen
+- Decision and why: there is no accept or reject choice, because there are no optional cookies. Only essential cookies are set, so a fake choice would be misleading. The notice says so in plain words
+- Finding: the system sets four cookies, not two. Besides the two sign in cookies, the web framework adds a session cookie and an XSRF-TOKEN on every page load. The notice lists all four. The session cookie is not used to sign anyone in, so it could be removed in a later story
+- Decision and why: the message is remembered in local storage with a versioned key, not in a cookie, so the message about cookies does not set a cookie itself
+- Decision and why: a test compares the notice with the real server settings (cookie names and lifetimes), so the notice cannot drift away from what the system does
+- Evidence: resources/js/pages/CookieNotice.test.tsx (shows on first visit, hides after Got it and after a reload, not on /cookies, link works, blocked storage, no focus trap, lists every cookie), tests/Feature/Core/CookieNoticeTest.php (names and lifetimes match the config, the cookies set on a page load and on sign in)
+- Paper: Chapter 3 (data privacy and cookies), Chapter 4 (privacy screens)
+
 ## 2026-11-06 · Clear sign in messages for accounts that are not usable yet (core)
 - What was built: when the password is right but the account cannot be used, sign in now says why: confirm the email (with a link to the code screen), waiting for admin approval, not approved, or disabled. Before, all of these said "email or password is wrong", which sent people in circles
 - Decision and why: the reason is shown only after the password has been verified. Someone who does not know the password still gets the same generic answer for a wrong password and an unknown email, so the screen cannot be used to find out who has an account
