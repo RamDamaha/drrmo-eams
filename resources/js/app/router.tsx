@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router';
 import { AdminLayout } from '@/layouts/AdminLayout';
 import { MobileLayout } from '@/layouts/MobileLayout';
+import { CookieNotice } from '@/pages/CookieNotice';
 import { ForgotPassword } from '@/pages/ForgotPassword';
 import { AccessRequests } from '@/features/personnel/pages/admin/AccessRequests';
 import { Login } from '@/pages/Login';
@@ -17,6 +18,7 @@ import { NotFound } from '@/pages/NotFound';
 export const router = createBrowserRouter([
     { path: '/', element: <HomeRedirect /> },
     { path: '/login', element: <Login /> },
+    { path: '/cookies', element: <CookieNotice /> },
     { path: '/register', element: <RequestAccess /> },
     { path: '/register/verify', element: <VerifyEmail /> },
     { path: '/register/pending', element: <WaitingForApproval /> },

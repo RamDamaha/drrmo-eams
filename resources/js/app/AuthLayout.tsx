@@ -4,6 +4,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { BrandLogos } from '@/shared/ui/BrandLogos';
+import { CookieBanner } from '@/shared/ui/CookieBanner';
 
 const highlights: { title: string; text: string; icon: ReactNode }[] = [
     {
@@ -122,45 +123,53 @@ export function AuthLayout({
     children: ReactNode;
 }) {
     return (
-        <div className="min-h-dvh bg-white lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-            <BrandPanel />
+        <>
+            <div className="min-h-dvh bg-white lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+                <BrandPanel />
 
-            <main className="relative -mt-5 rounded-t-[1.25rem] bg-white px-6 pt-8 pb-10 sm:px-10 lg:mt-0 lg:flex lg:flex-col lg:rounded-none lg:px-14 lg:py-12">
-                <div className="mx-auto w-full max-w-sm sm:max-w-xl lg:my-auto lg:max-w-sm">
-                    <div className="brand-stripe h-1 w-12 rounded-full" aria-hidden="true" />
-                    <h1 className="mt-5 text-2xl font-semibold tracking-tight text-stone-900 sm:text-[1.75rem]">
-                        {title}
-                    </h1>
-                    {subtitle && <p className="mt-1.5 text-pretty text-stone-600">{subtitle}</p>}
+                <main className="relative -mt-5 rounded-t-[1.25rem] bg-white px-6 pt-8 pb-10 sm:px-10 lg:mt-0 lg:flex lg:flex-col lg:rounded-none lg:px-14 lg:py-12">
+                    <div className="mx-auto w-full max-w-sm sm:max-w-xl lg:my-auto lg:max-w-sm">
+                        <div className="brand-stripe h-1 w-12 rounded-full" aria-hidden="true" />
+                        <h1 className="mt-5 text-2xl font-semibold tracking-tight text-stone-900 sm:text-[1.75rem]">
+                            {title}
+                        </h1>
+                        {subtitle && (
+                            <p className="mt-1.5 text-pretty text-stone-600">{subtitle}</p>
+                        )}
 
-                    {children}
+                        {children}
 
-                    <div className="mt-10 flex gap-3 border-t border-stone-200 pt-5 text-[0.8125rem] leading-relaxed text-stone-500">
-                        <svg
-                            viewBox="0 0 24 24"
-                            className="mt-0.5 size-4 shrink-0 text-stone-400"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.8"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
-                        >
-                            <path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6l-8-3Z" />
-                            <path d="m9 12 2 2 4-4" />
-                        </svg>
-                        <p>
-                            Your information is protected under the Data Privacy Act of 2012 (RA
-                            10173). Location is only shared while you are on duty.
+                        <div className="mt-10 flex gap-3 border-t border-stone-200 pt-5 text-[0.8125rem] leading-relaxed text-stone-500">
+                            <svg
+                                viewBox="0 0 24 24"
+                                className="mt-0.5 size-4 shrink-0 text-stone-400"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden="true"
+                            >
+                                <path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6l-8-3Z" />
+                                <path d="m9 12 2 2 4-4" />
+                            </svg>
+                            <p>
+                                Your information is protected under the Data Privacy Act of 2012 (RA
+                                10173). Location is only shared while you are on duty.
+                            </p>
+                        </div>
+                        <p className="mt-4 text-[0.8125rem]">
+                            <AuthLink to="/cookies">Cookie notice</AuthLink>
                         </p>
                     </div>
-                </div>
 
-                <p className="mt-10 text-center text-xs text-stone-500 lg:hidden">
-                    © {year} ZPPSU DRRMO · Zamboanga City
-                </p>
-            </main>
-        </div>
+                    <p className="mt-10 text-center text-xs text-stone-500 lg:hidden">
+                        © {year} ZPPSU DRRMO · Zamboanga City
+                    </p>
+                </main>
+            </div>
+            <CookieBanner />
+        </>
     );
 }
 
