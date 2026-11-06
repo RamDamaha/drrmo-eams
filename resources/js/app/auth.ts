@@ -31,6 +31,33 @@ export function useMe() {
     return useQuery({ queryKey: meKey, queryFn: fetchMe, staleTime: 60_000, retry: false });
 }
 
+// Asks for a reset link. The server answers the same way whether or not the email has an account.
+export async function requestPasswordReset(email: string): Promise<string> {
+    await fetch('/sanctum/csrf-cookie', { credentials: 'same-origin' });
+    const body = await api<{ message: string }>('/api/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+    });
+    return body.message;
+}
+
+export interface NewPassword {
+    token: string;
+    email: string;
+    password: string;
+    password_confirmation: string;
+}
+
+// Sets a new password from the emailed link. The server then ends every session for the account.
+export async function resetPassword(input: NewPassword): Promise<string> {
+    await fetch('/sanctum/csrf-cookie', { credentials: 'same-origin' });
+    const body = await api<{ message: string }>('/api/reset-password', {
+        method: 'POST',
+        body: JSON.stringify(input),
+    });
+    return body.message;
+}
+
 export function useAuthActions() {
     const queryClient = useQueryClient();
 

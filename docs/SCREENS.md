@@ -63,7 +63,9 @@ Tap targets at least 48 px. Base font 16 px, high contrast for outdoor use. On s
 
 | Screen | Role | Phone layout | Desktop |
 |---|---|---|---|
-| M-Login | Everyone | Maroon header with the ZPPSU and DRRMO logos, office names and system name. White sheet below with email, password (show and hide), big Sign in button, a line saying the DRRMO office resets forgotten passwords, and a data privacy note. | Two columns: brand panel left, form right |
+| M-Login | Everyone | Maroon header with the ZPPSU and DRRMO logos, office names and system name. White sheet below with email, password (show and hide), big Sign in button, a "Forgot your password?" link, and a data privacy note. | Two columns: brand panel left, form right |
+| M-Forgot password | Everyone | Same frame as M-Login. Email field and a Send reset link button. After sending, a success note that never says whether the email has an account, and that the link works for 60 minutes. Back to sign in link. | Same as M-Login |
+| M-Reset password | Anyone with a link | Same frame as M-Login. Opened from the email. New password (at least 12 characters, with a hint) and Type it again, then Save new password. Afterwards a note that every device was signed out and a link to sign in. A broken or old link shows a short error and a link to ask for a new one. | Same as M-Login |
 | M-Privacy notice and consent | Everyone | Scrollable notice, plain language summary at top, "I agree" button fixed at bottom. | Centered column |
 | M-Location consent | Marshal, Volunteer | Short text with three bullets (when, who sees it, how long kept), Agree and Not now buttons. | Centered column |
 | M-My assignments | Marshal, Volunteer | Tabs Today and Upcoming. Each card: event, time, place, duty type, status chip. Current or next shift pinned on top with its main button (Acknowledge or Start duty). | Two-column cards |

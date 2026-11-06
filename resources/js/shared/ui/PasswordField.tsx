@@ -4,6 +4,7 @@ import { TextField } from './TextField';
 
 interface PasswordFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
     label?: string;
+    hint?: string;
     error?: string | null;
 }
 

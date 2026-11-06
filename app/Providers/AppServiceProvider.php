@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Modules\Personnel\Models\User;
+use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -21,6 +27,27 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Rate limits from docs/SECURITY_AND_PRIVACY.md section 6.
+        RateLimiter::for('forgot-password', fn (Request $request) => Limit::perMinutes(10, 3)
+            ->by((string) $request->ip())
+            ->response(fn () => $this->tooManyAttempts()));
+
+        RateLimiter::for('reset-password', fn (Request $request) => Limit::perMinutes(10, 10)
+            ->by((string) $request->ip())
+            ->response(fn () => $this->tooManyAttempts()));
+
+        // The emailed link opens the React screen, which posts to /api/reset-password.
+        ResetPassword::createUrlUsing(fn (User $user, string $token): string => url('/reset-password').'?'.http_build_query([
+            'token' => $token,
+            'email' => $user->email,
+        ]));
+    }
+
+    private function tooManyAttempts(): JsonResponse
+    {
+        return response()->json([
+            'message' => 'Too many attempts. Wait a few minutes and try again.',
+            'code' => 'too_many_attempts',
+        ], 429);
     }
 }
