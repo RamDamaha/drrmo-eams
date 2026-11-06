@@ -74,3 +74,13 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Decision and why: there is no self service password reset yet, so the login screen tells people to ask the DRRMO office instead of showing a link that does nothing
 - Evidence: resources/js/shared/ui/ui.test.tsx, Login.test.tsx, figures/m-login.png, figures/m-login-desktop.png
 - Paper: Chapter 3 (user interface design), Chapter 4 (login screen)
+
+## 2026-11-06 · Forgot and reset password (core)
+- What was built: POST /api/forgot-password and POST /api/reset-password on Laravel's password broker, a Forgot password screen, a Reset password screen opened from the emailed link, and a shared AuthLayout so every signed-out screen uses the same brand frame
+- Decision and why: forgot password gives the same answer whether or not the email has an account, so nobody can use it to find out who has an account
+- Decision and why: a disabled account never gets a link and cannot use an old one, the same as at login
+- Decision and why: links last 60 minutes and work once. After a reset every session of the account is deleted, so a lost phone that was still signed in is signed out
+- Decision and why: new passwords need at least 12 characters. Length helps more than symbol rules, and a short sentence is easy to remember on a phone
+- Decision and why: both requests are rate limited per IP (3 and 10 per 10 minutes) and write audit rows (auth.password_reset_requested, auth.password_reset_completed)
+- Evidence: tests/Feature/Core/PasswordResetTest.php, resources/js/pages/PasswordReset.test.tsx
+- Paper: Chapter 3 (account security), Chapter 4 (forgot and reset password screens)

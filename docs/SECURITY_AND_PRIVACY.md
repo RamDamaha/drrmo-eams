@@ -93,7 +93,8 @@ Audit rows are insert only. The app has no update or delete route for them, and 
 | Endpoint | Limit |
 |---|---|
 | `POST /api/login` | 5 per minute per email and IP |
-| `POST /api/forgot-password` | 3 per 10 minutes per IP |
+| `POST /api/forgot-password` | 3 per 10 minutes per IP, and one email per account per minute |
+| `POST /api/reset-password` | 10 per 10 minutes per IP |
 | `POST /api/me/assignments/{id}/pings` | 10 requests per minute per user, max 50 points per request |
 | `POST /api/me/report-slots/{id}` | 6 per minute per user |
 | Other API | 120 per minute per user |

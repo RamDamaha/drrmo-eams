@@ -1,7 +1,9 @@
 import { createBrowserRouter } from 'react-router';
 import { AdminLayout } from '@/layouts/AdminLayout';
 import { MobileLayout } from '@/layouts/MobileLayout';
+import { ForgotPassword } from '@/pages/ForgotPassword';
 import { Login } from '@/pages/Login';
+import { ResetPassword } from '@/pages/ResetPassword';
 import { Placeholder } from '@/pages/Placeholder';
 import { HomeRedirect, RequireAuth } from './RequireAuth';
 import { NotFound } from '@/pages/NotFound';
@@ -11,6 +13,8 @@ import { NotFound } from '@/pages/NotFound';
 export const router = createBrowserRouter([
     { path: '/', element: <HomeRedirect /> },
     { path: '/login', element: <Login /> },
+    { path: '/forgot-password', element: <ForgotPassword /> },
+    { path: '/reset-password', element: <ResetPassword /> },
     {
         element: <RequireAuth area="/admin" />,
         children: [
