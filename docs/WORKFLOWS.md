@@ -98,6 +98,7 @@ Do this only when the work does not fit any of the seven modules. Most new featu
 ## 9. Add a screen
 
 - [ ] Check SCREENS.md for its layout and device priority. Add it there if it is new.
+- [ ] Follow DESIGN_SYSTEM.md: tokens, shared components from `resources/js/shared/ui`, and the checklist in its section 12.
 - [ ] Page in `resources/js/features/<module>/pages/admin` or `pages/mobile`.
 - [ ] Data through a hook in `hooks/` that calls `api.ts`. No `fetch` inside components.
 - [ ] Loading, empty, error and offline states (SCREENS.md bottom section).
