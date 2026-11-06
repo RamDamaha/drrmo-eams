@@ -95,6 +95,14 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Evidence: tests/Feature/Personnel/RegistrationTest.php (success, wrong, expired and locked codes, duplicate email, throttle, forbidden for non-admins, audit of approve and reject, pending cannot sign in), resources/js/pages/RequestAccess.test.tsx
 - Paper: Chapter 3 (registration and approval design), Chapter 4 (security tests)
 
+## 2026-11-06 · One mail path and clear feedback on the sign up screens (core, personnel)
+- What was built: the password reset email now goes through the same `MailSender` (PHPMailer) as the sign up code. Send a new code on the confirm screen now shows a spinner, a success note, a 60 second countdown and clear errors
+- Why the reset email did not arrive: the screen said "we sent a link" on purpose for every address, but the address was a pending sign up and the system never sends a reset link to pending, rejected or disabled accounts. The audit row showed `sent: false`. To test, approve the account first. The reset email also used Laravel's own mailer, a second path with its own settings, so it was moved onto the shared one
+- Decision and why: one mail path means one place to configure and to read errors. A failure is logged as `Password reset email failed` and the public answer stays the same, so the screen still cannot be used to find out which emails have accounts
+- Decision and why: the resend button waits 60 seconds on the screen too, because the server ignores a second request inside that minute. Without the wait the screen would say "sent" when nothing was sent
+- Evidence: tests/Feature/Core/PasswordResetTest.php (active account gets mail, unknown, pending, rejected and disabled get none with the same answer, mail failure keeps the answer and logs, the link works), resources/js/pages/VerifyEmail.test.tsx (spinner, success, countdown with fake timers, 429, error, clearing messages)
+- Paper: Chapter 4 (account recovery behavior)
+
 ## 2026-11-06 · Proper sign out (core)
 - What was built: one sign out path that clears all client state, stops quiet re-login, signs out other tabs, and keeps protected answers out of browser memory. The server cleans up the cookies exactly and audits the sign out with the right actor
 - Decision and why: sign out clears every cached answer, not only the user record. Before, the next person on a shared phone could briefly see data of the one before. `queryClient.clear()` would also detach the live user query the route guards listen to, so the same wipe is done by removing every query except that one

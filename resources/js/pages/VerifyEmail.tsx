@@ -1,4 +1,6 @@
 // Confirm email (M-Confirm email in SCREENS.md). Enter the 6 digit code sent by email.
+// "Send a new code" always answers on screen: it shows it is working, says what happened, and
+// then waits 60 seconds, the same limit the server keeps.
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { AuthLayout, AuthLink } from '@/app/AuthLayout';
@@ -19,6 +21,8 @@ export function VerifyEmail() {
     const [notice, setNotice] = useState<string | null>(null);
     const [locked, setLocked] = useState(false);
     const [busy, setBusy] = useState(false);
+    const [resending, setResending] = useState(false);
+    // The code was just sent when this screen opened, so the first wait is already running.
     const [wait, setWait] = useState(RESEND_WAIT);
 
     useEffect(() => {
@@ -72,16 +76,25 @@ export function VerifyEmail() {
     }
 
     async function resend() {
+        if (resending || wait > 0) return;
         setError(null);
         setNotice(null);
+        setResending(true);
         try {
             await resendCode(email);
             setLocked(false);
             setCode('');
             setWait(RESEND_WAIT);
-            setNotice('If this email can be used, we sent a new code.');
-        } catch {
-            setError('Could not send a new code. Wait a few minutes and try again.');
+            setNotice(`We sent a new code to ${email}. It may take a minute.`);
+        } catch (caught) {
+            if (caught instanceof ApiError && caught.status === 429) {
+                setWait(caught.retryAfter ?? RESEND_WAIT);
+                setError('Please wait a minute before asking again.');
+            } else {
+                setError('Could not send a new code. Try again.');
+            }
+        } finally {
+            setResending(false);
         }
     }
 
@@ -103,17 +116,29 @@ export function VerifyEmail() {
                     required
                 />
 
-                {error && <Alert tone="error">{error}</Alert>}
-                {notice && <Alert tone="success">{notice}</Alert>}
-
                 <Button type="submit" block loading={busy} disabled={locked}>
                     {busy ? 'Checking...' : 'Confirm email'}
                 </Button>
             </form>
 
-            <div className="mt-5 flex items-center justify-between text-sm">
-                <Button variant="ghost" size="md" onClick={resend} disabled={wait > 0 && !locked}>
-                    {wait > 0 && !locked ? `Send a new code in ${wait}s` : 'Send a new code'}
+            <div className="mt-4 space-y-3" aria-live="polite">
+                {error && <Alert tone="error">{error}</Alert>}
+                {notice && <Alert tone="success">{notice}</Alert>}
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm">
+                <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={resend}
+                    loading={resending}
+                    disabled={wait > 0}
+                >
+                    {resending
+                        ? 'Sending...'
+                        : wait > 0
+                          ? `Send a new code in ${wait}s`
+                          : 'Send a new code'}
                 </Button>
                 <AuthLink to="/login">Back to sign in</AuthLink>
             </div>

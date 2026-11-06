@@ -6,6 +6,7 @@ namespace App\Modules\Personnel\Models;
 
 use App\Modules\Access\Enums\Role as RoleCode;
 use App\Modules\Access\Models\Role;
+use App\Modules\Notifications\Contracts\MailSender;
 use App\Modules\Personnel\Enums\AccountStatus;
 use App\Modules\Personnel\Enums\AvailabilityStatus;
 use App\Modules\Personnel\Enums\Team;
@@ -68,6 +69,32 @@ class User extends Authenticatable
     protected function name(): Attribute
     {
         return Attribute::get(fn (): string => trim($this->first_name.' '.($this->last_name === '-' ? '' : $this->last_name)));
+    }
+
+    /** The screen the emailed link opens. It posts the token to /api/reset-password. */
+    public function passwordResetUrl(string $token): string
+    {
+        return url('/reset-password').'?'.http_build_query(['token' => $token, 'email' => $this->email]);
+    }
+
+    /**
+     * Called by the password broker. Sends the reset link through the same MailSender as the
+     * sign up code, so there is one mail path. It throws when the mail cannot be sent.
+     *
+     * @param  string  $token
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $minutes = (int) config('auth.passwords.users.expire');
+
+        app(MailSender::class)->send(
+            $this->email,
+            $this->name,
+            'Reset your DRRMO EAMS password',
+            "Hello {$this->name},\n\nSomeone asked to reset the password of this account. Open this link to choose a new password:\n\n"
+            .$this->passwordResetUrl((string) $token)
+            ."\n\nThe link works for {$minutes} minutes and only once. If you did not ask for this, ignore this email. Your password stays the same.\n\nZPPSU DRRMO",
+        );
     }
 
     /** @return BelongsTo<Role, $this> */
