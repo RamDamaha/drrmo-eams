@@ -40,7 +40,7 @@ it('states the real lifetimes', function () {
 });
 
 it('sets only the cookies the notice lists when a page opens', function () {
-    $response = $this->get('/login');
+    $response = $this->withoutVite()->get('/login')->assertOk();
 
     $names = collect($response->headers->getCookies())->map(fn ($cookie) => $cookie->getName())->sort()->values()->all();
 
@@ -59,5 +59,5 @@ it('sets only the two sign in cookies on top of those when someone signs in', fu
 });
 
 it('serves the notice page to anyone, signed in or not', function () {
-    $this->get('/cookies')->assertOk();
+    $this->withoutVite()->get('/cookies')->assertOk();
 });
