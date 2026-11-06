@@ -1,0 +1,271 @@
+# Design System
+
+How every screen in DRRMO EAMS should look and feel. Read this before any UI work. The tokens live in `resources/css/app.css` and the shared pieces live in `resources/js/shared/ui`. The login screen (`resources/js/pages/Login.tsx`) is the reference build.
+
+## 0. The prompt
+
+Paste this at the start of any UI task, for a person or for an AI helper.
+
+```
+You are designing a screen for DRRMO EAMS, the Personnel Event Assignment and
+Monitoring System of the ZPPSU Disaster Risk Reduction and Management Office.
+Follow docs/DESIGN_SYSTEM.md exactly.
+
+Look and feel: calm, official and trustworthy, like a well run university office.
+Not playful, not flashy. Plenty of white space, one clear main action per screen.
+Flat surfaces only: no gradients, glows, dot or grid patterns, glass effects,
+pill badges, emoji, or rows of icon feature cards. If an element is only there
+to decorate, leave it out.
+
+Colors: ZPPSU maroon is the brand and the color of primary buttons. Gold is a
+small accent on dark maroon surfaces only. DRRMO orange ("ember") means live or
+urgent: on duty, overdue, live map. Neutrals are Tailwind "stone". Never invent
+new hex values; use the tokens.
+
+Type: Public Sans. Body 16 px. Headings bold with tight tracking.
+
+Shapes: rounded-control (8 px) for buttons and inputs, rounded-card (12 px) for
+cards, rounded-sheet (16 px) for bottom sheets. Borders before shadows; shadows
+only on things that float, like menus and dialogs.
+
+Layout: Marshal, Volunteer and Coordinator screens are mobile first at 360 to
+430 px, one column, tap targets at least 48 px, main action at thumb reach.
+Admin screens are desktop first at 1280 px, sidebar plus wide content.
+
+Reuse Button, TextField, PasswordField, Alert, BrandLogos and Spinner from
+resources/js/shared/ui before writing new markup. Every screen needs loading,
+empty, error and offline states. Write copy in short, plain sentences.
+```
+
+## 1. The idea
+
+The system belongs to two owners, and the design shows both.
+
+- **ZPPSU** gives the base: deep maroon and gold. It makes the app feel official and part of the university.
+- **DRRMO** gives the signal: a bright orange we call **ember**. It is used sparingly, only where something is live or needs attention now.
+
+### Restraint
+
+The design should look like it was made by an office that takes safety seriously, not like a startup landing page. In practice:
+
+- Solid colors. Maroon surfaces are flat `maroon-900`, with no gradient or texture.
+- One accent at a time. A short 2 px `gold-400` rule above a title on a maroon surface is the only decoration we use.
+- Content over ornament. Say what the system does in one sentence instead of a grid of feature icons.
+- Hierarchy comes from size, weight and spacing, not from boxes, badges and colors.
+- Every screen should still make sense in grayscale.
+
+## 2. Logos
+
+Files are in `public/images/brand/`.
+
+| File | Use |
+|---|---|
+| `zppsu-logo.webp` | Screens (transparent background) |
+| `drrmo-logo.webp` | Screens (white background removed) |
+| `zppsu-logo.png`, `drrmo-logo.png` | Emails and printouts, where WebP may not work |
+| `apple-touch-icon.png`, `icon-192.png`, `/favicon.ico` | Browser tab and phone home screen |
+
+Rules:
+
+- Use the `BrandLogos` component when both logos appear. ZPPSU always comes first (left), because DRRMO is an office under the university.
+- Show both logos on the login screen, the privacy notice and printed reports. Inside the app, the top bar may show only the small pair at `size="sm"`.
+- Do not stretch, recolor, crop or add outlines. A soft drop shadow on dark backgrounds is fine.
+- Smallest size is 36 px. Below that the text inside the seals cannot be read.
+- Always keep the alt text. It names the university and the office.
+
+## 3. Color
+
+Use Tailwind classes with these names, for example `bg-maroon-700` or `text-ember-700`.
+
+### Brand
+
+| Token | Hex | Use |
+|---|---|---|
+| `maroon-50` | `#fbf3f3` | Selected row, hover on ghost buttons |
+| `maroon-100` | `#f6e3e4` | Active nav item background |
+| `maroon-600` | `#962a30` | Focus outline, links on hover |
+| `maroon-700` | `#7d1d23` | **Primary buttons, links, active icons** |
+| `maroon-800` | `#661419` | Hover on primary, browser theme color |
+| `maroon-900` | `#520f14` | Dark surfaces: login brand panel, admin sidebar |
+| `maroon-950` | `#33080b` | Deepest end of gradients |
+| `gold-200` to `gold-300` | `#fbe08e` to `#f7cb4f` | Accent text and icons on dark maroon |
+| `gold-400` | `#f2b82a` | The thin rule above titles on maroon |
+| `ember-500` | `#f04e12` | Live dots and map pins (not for text) |
+| `ember-600` | `#d63a0a` | "On duty" button and banner background (white text passes AA) |
+| `ember-700` | `#b12c0b` | Ember text on white (overdue, late) |
+
+Full scales from 50 to 950 are in `app.css`.
+
+### Neutrals
+
+Tailwind `stone`, which is slightly warm and sits well next to maroon.
+
+| Token | Use |
+|---|---|
+| `stone-50` | Page background on app screens |
+| `white` | Cards, forms, the login form side |
+| `stone-200` | Card borders and dividers |
+| `stone-300` | Input borders |
+| `stone-500` | Hints and timestamps (smallest allowed gray for text) |
+| `stone-600` | Secondary text |
+| `stone-900` | Main text |
+
+### Status
+
+| Meaning | Chip classes | Example |
+|---|---|---|
+| Assigned, waiting | `bg-sky-50 text-sky-800 ring-sky-200` | Assigned |
+| Acknowledged, done, on time | `bg-green-50 text-green-800 ring-green-200` | Acknowledged, Submitted |
+| On duty, live | `bg-ember-50 text-ember-700 ring-ember-200` plus a pulsing `bg-ember-500` dot | On duty |
+| Needs attention soon | `bg-amber-50 text-amber-900 ring-amber-200` | Due in 15 min, Late |
+| Problem | `bg-red-50 text-red-800 ring-red-200` | Overdue, Failed, No ping 5+ min |
+| Ended, cancelled, inactive | `bg-stone-100 text-stone-600 ring-stone-200` | Ended, Cancelled |
+
+Rules:
+
+- Color is never the only signal. A chip always has a word, and an alert always has an icon.
+- Text must pass WCAG AA (4.5 to 1). Gold never goes on white as text. Ember text on white uses `ember-700`.
+- Destructive actions (delete, revoke, cancel event) use `red`, not ember. Ember means "live", red means "danger".
+
+## 4. Type
+
+- Font: **Public Sans** (variable, self hosted through `@fontsource-variable/public-sans`, so it works offline and sends no data to Google). It was made for government services and reads well outdoors.
+- Body text is 16 px (`text-base`) everywhere. On phones, inputs must stay at 16 px or iOS zooms in.
+
+| Role | Classes |
+|---|---|
+| Display (login brand column only) | `text-4xl font-semibold leading-tight tracking-tight text-balance` |
+| Page title | `text-2xl font-semibold tracking-tight text-stone-900` |
+| Section title | `text-lg font-semibold text-stone-900` |
+| Body | `text-base text-stone-700` |
+| Secondary | `text-sm text-stone-600` |
+| Label | `text-sm font-medium text-stone-800` |
+| Eyebrow | `text-xs font-semibold uppercase tracking-[0.14em]` |
+| Numbers in tables | add `tabular-nums` |
+
+Use `text-pretty` on paragraphs so the last line is not a single word.
+
+## 5. Shape, space and depth
+
+- Spacing follows Tailwind's 4 px steps. Common gaps: 8 px inside a control, 16 px between fields, 24 to 32 px between sections.
+- Page padding: 24 px on phones (`px-6`), 40 px on tablets (`sm:px-10`), 56 px or more on desktop.
+- Radius tokens: `rounded-control` (8 px) for buttons, inputs and alerts; `rounded-card` (12 px) for cards and panels; `rounded-sheet` (16 px) for bottom sheets. Chips and avatars use `rounded-full`.
+- Shadows: none on inputs, buttons or cards. `shadow-raised` only on things that float above the page: menus, dialogs and sheets.
+- Prefer a 1 px `ring-stone-200` or `border-stone-200` over a shadow for flat cards on white.
+
+## 6. Components
+
+All in `resources/js/shared/ui`. Add a new shared piece only when two screens need it.
+
+**Button** (`Button.tsx`)
+- Variants: `primary` (maroon, one per screen), `secondary` (white with border), `ghost` (text only), `danger` (red), `duty` (ember, only for Start duty, End duty and live actions).
+- Sizes: `lg` is 48 px tall and is the default on phones. `md` is 40 px for dense admin toolbars.
+- `loading` shows a spinner and disables the button, so nobody submits twice. Change the label too, for example "Signing in...".
+- Use `block` for full width buttons on phones.
+
+**TextField and PasswordField**
+- The label is always visible above the input. Placeholders are only for examples, never instead of a label.
+- Error text goes under the field in `text-red-700`, and the input gets a red border and `aria-invalid`.
+- PasswordField has a show and hide button, because typing on a phone in the sun is hard.
+
+**Alert**
+- Tones: `error`, `warning`, `success`, `info`. Errors use `role="alert"` so screen readers read them right away.
+- Place it right above the button that caused it.
+
+**Cards**
+- `rounded-card bg-white ring-1 ring-stone-200 p-4` on phones, `p-6` on desktop.
+- On phones, the whole card is the tap target when it opens a detail screen.
+
+**Chips** (status)
+- `inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset` plus the status classes in section 3.
+
+**Icons**
+- Line icons, 24 px grid, 1.8 stroke, round caps and joins, `currentColor`. Draw them as inline SVG like the ones in Login.tsx. Do not add an icon font.
+- Decorative icons get `aria-hidden="true"`. Icon only buttons need an `aria-label`.
+
+## 7. Layouts
+
+### Phone screens (Marshal, Volunteer, Coordinator)
+
+```
++-----------------------------+
+| [logos sm] DRRMO    [bell]  |  white top bar, 1 px stone-200 bottom border
+| [On duty banner, ember-600] |  only while on duty
+|                             |
+|  Page title                 |
+|  One main card or form      |  stone-50 background, white cards
+|  Short list                 |
+|                             |
+|  [ Main action, 48 px ]     |  sticky above the tab bar when it matters
++-----------------------------+
+| Duties | Memos | Msgs | Me  |  white tab bar, active tab maroon with a pill
++-----------------------------+
+```
+
+- Design at 360 px first, then check 375 and 430. No sideways scroll.
+- Tap targets at least 48 by 48 px, with 8 px between them.
+- Keep the main action in the lower half of the screen, where thumbs reach.
+- Respect the iPhone safe area with `pb-[env(safe-area-inset-bottom)]`.
+- Above 768 px the content sits in a centered column, as SCREENS.md says.
+
+### Admin screens (desktop first)
+
+```
++--------------+------------------------------------------------+
+| [logos] DRRMO|  Page title                  [search] [user]   |  white top bar
+|              +------------------------------------------------+
+| Dashboard    |                                                |
+| Events       |  stone-50 background                           |
+| People       |  white cards and tables, max width 1440 px     |
+| Map          |                                                |
+| ...          |                                                |
++--------------+------------------------------------------------+
+  maroon-900 sidebar, white text at 80%, active item white
+  with a gold-400 bar on its left edge
+```
+
+- Design at 1280 px. Content area uses a 12 column grid with 24 px gaps.
+- Tables: header `text-xs font-semibold uppercase tracking-wide text-stone-500`, rows 48 px tall, zebra striping off, hover `bg-stone-50`, numbers right aligned with `tabular-nums`.
+- Filters sit above the table in one row. The primary action (for example "New event") sits at the top right of the page header.
+- Below 1024 px the sidebar collapses to icons, and below 768 px it becomes a top menu (SCREENS.md).
+
+### Login (reference build)
+
+- Phone: a flat maroon header with both logos centered and the two office names under them. Below it, on white: the system name in small maroon text, the "Sign in" title, the form, and a footer with the privacy line.
+- Desktop: two equal columns. The left column is flat maroon with the logos and office names at the top, the system name and one sentence in the middle, and the city at the bottom. The right column holds the form on white, with the footer at the bottom.
+
+## 8. States every screen needs
+
+- **Loading:** gray skeleton blocks (`animate-pulse bg-stone-200 rounded`) in the shape of the real content. Never a blank page or a lone spinner in the middle.
+- **Empty:** a small line icon, one sentence and, when it helps, the next step. Example: "No duties yet. DRRMO will email you when you are assigned."
+- **Error:** an `Alert` with a plain message and a Retry button.
+- **Offline (phones):** a thin `bg-stone-800 text-white text-sm` bar at the top: "You're offline. Changes will be sent when you reconnect."
+
+## 9. Motion
+
+- Short and quiet: 150 ms for hovers and color changes, 200 to 250 ms for sheets and dialogs, ease out.
+- Only one thing pulses: the live dot next to "On duty".
+- `prefers-reduced-motion` turns animation off. This is already handled in `app.css`.
+
+## 10. Accessibility
+
+- Every input has a label, every image has alt text, every icon only button has an `aria-label`.
+- Focus is always visible: a 2 px maroon outline on light surfaces, gold on dark surfaces (add the `on-dark` class to a dark section).
+- One `h1` per screen. Headings go in order.
+- Check the screen at 200% zoom and with a keyboard only.
+
+## 11. Writing
+
+- Short, plain sentences. Talk to the person as "you".
+- Buttons say what happens: "Sign in", "Start duty", "Send report". Not "Submit" or "OK".
+- Error messages say what went wrong and what to do next.
+- Use real looking but made-up data in screenshots. Emails end in `@example.test`.
+- No em dashes.
+
+## 12. Before you open a UI pull request
+
+- [ ] Used tokens and shared components, no new hex values.
+- [ ] Checked phone screens at 360 px, admin screens at 1280 px.
+- [ ] Loading, empty, error and offline states are done.
+- [ ] Keyboard and screen reader basics pass (labels, focus, alt text).
+- [ ] Screenshot saved to `docs/capstone/figures/` (see DOCUMENTATION_GUIDE.md).

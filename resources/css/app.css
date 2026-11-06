@@ -1,8 +1,82 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/public-sans';
 
 @source '../views';
 @source '../js';
 
+/*
+ * Design tokens. The rules for using them are in docs/DESIGN_SYSTEM.md.
+ * maroon = ZPPSU (brand, primary actions)
+ * gold   = ZPPSU (accents on dark surfaces only, never text on white)
+ * ember  = DRRMO (field urgency: on duty, overdue, live)
+ * Neutrals use Tailwind's warm "stone" scale.
+ */
 @theme {
-    --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --font-sans:
+        'Public Sans Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+        sans-serif;
+
+    --color-maroon-50: #fbf3f3;
+    --color-maroon-100: #f6e3e4;
+    --color-maroon-200: #edc4c6;
+    --color-maroon-300: #e09a9e;
+    --color-maroon-400: #cb666c;
+    --color-maroon-500: #b23b42;
+    --color-maroon-600: #962a30;
+    --color-maroon-700: #7d1d23;
+    --color-maroon-800: #661419;
+    --color-maroon-900: #520f14;
+    --color-maroon-950: #33080b;
+
+    --color-gold-50: #fef9ea;
+    --color-gold-100: #fdf0c7;
+    --color-gold-200: #fbe08e;
+    --color-gold-300: #f7cb4f;
+    --color-gold-400: #f2b82a;
+    --color-gold-500: #e09a12;
+    --color-gold-600: #bf760c;
+    --color-gold-700: #985610;
+    --color-gold-800: #7d4513;
+    --color-gold-900: #6a3a15;
+
+    --color-ember-50: #fff4ed;
+    --color-ember-100: #ffe5d4;
+    --color-ember-200: #ffc7a8;
+    --color-ember-300: #ff9f70;
+    --color-ember-400: #fb6f36;
+    --color-ember-500: #f04e12;
+    --color-ember-600: #d63a0a;
+    --color-ember-700: #b12c0b;
+    --color-ember-800: #8d2611;
+    --color-ember-900: #722212;
+
+    --radius-control: 0.5rem;
+    --radius-card: 0.75rem;
+    --radius-sheet: 1rem;
+
+    --shadow-raised: 0 10px 30px -10px rgb(51 8 11 / 0.25), 0 4px 10px -4px rgb(28 25 23 / 0.1);
+}
+
+@layer base {
+    html {
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    :focus-visible {
+        outline: 2px solid var(--color-maroon-600);
+        outline-offset: 2px;
+    }
+
+    .on-dark :focus-visible {
+        outline-color: var(--color-gold-300);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
 }

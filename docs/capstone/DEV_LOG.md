@@ -65,3 +65,12 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Decision and why: MariaDB 10.4 is not MySQL 8, so the Docker setup and CI stay on MySQL 8 and still catch database differences. All migrations, seeders and 34 Pest tests passed on MariaDB 10.4 and PHP 8.5
 - Evidence: Login.test.tsx (401 and 500 sign out tests), README section "Run without Docker"
 - Paper: Chapter 4 (testing on a real machine), Chapter 5 (limitations: local database differs from the server)
+
+## 2026-11-06 · Design system and the landing and login screen (core)
+- What was built: DESIGN_SYSTEM.md with a ready to paste UI prompt, color and shape tokens in app.css, shared Button, TextField, PasswordField, Alert, Spinner and BrandLogos components, the ZPPSU and DRRMO logos as web assets and favicon, and a redesigned login screen
+- Decision and why: maroon and gold come from the ZPPSU seal and are the base, while the DRRMO orange is kept for live or urgent states only, so the app feels official and urgent things still stand out
+- Decision and why: after the first draft the owner asked for a cleaner, more official look, so gradients, glow effects, the dot pattern, badge and feature icons were removed. Surfaces are flat maroon and white, and hierarchy comes from type and spacing
+- Decision and why: Public Sans is self hosted instead of loaded from Google Fonts, so the screen works on a weak campus connection and no visitor data goes to a third party
+- Decision and why: there is no self service password reset yet, so the login screen tells people to ask the DRRMO office instead of showing a link that does nothing
+- Evidence: resources/js/shared/ui/ui.test.tsx, Login.test.tsx, figures/m-login.png, figures/m-login-desktop.png
+- Paper: Chapter 3 (user interface design), Chapter 4 (login screen)

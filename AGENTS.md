@@ -9,6 +9,7 @@ Project: ZPPSU DRRMO Personnel Event Assignment and Monitoring System. Laravel 1
 - docs/DATABASE.md: tables, migration prefixes, indexes.
 - CONTRIBUTING.md: branches, Conventional Commits, Definition of Done.
 - docs/WORKFLOWS.md: checklists for a new module, table, endpoint, permission, job or screen.
+- docs/DESIGN_SYSTEM.md: colors, type, components and layouts. Read it before any UI work.
 - docs/PLANNING_SUMMARY.md: current status and open decisions.
 - docs/DOCUMENTATION_GUIDE.md: every merged story adds a DEV_LOG entry and screenshots for the capstone paper.
 

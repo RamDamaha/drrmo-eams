@@ -3,12 +3,15 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#b91c1c">
+    <meta name="theme-color" content="#661419">
+    <meta name="description" content="ZPPSU DRRMO Personnel Event Assignment and Monitoring System">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" href="/images/brand/apple-touch-icon.png">
     <title>{{ config('app.name') }}</title>
     @viteReactRefresh
     @vite(['resources/css/app.css', 'resources/js/app/main.tsx'])
 </head>
-<body class="bg-gray-50 text-gray-900 antialiased">
+<body class="bg-stone-50 text-stone-900 antialiased">
     <div id="app"></div>
 </body>
 </html>
