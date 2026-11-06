@@ -33,7 +33,7 @@ function BrandPanel() {
     return (
         <section
             aria-label="About the system"
-            className="on-dark relative isolate overflow-hidden bg-maroon-900 text-white"
+            className="on-dark relative isolate overflow-hidden bg-maroon-900 text-white lg:sticky lg:top-0 lg:min-h-dvh lg:self-start"
         >
             {/* Background: a quiet maroon gradient with the ZPPSU gear as a faint watermark on desktop. */}
             <div
@@ -47,7 +47,7 @@ function BrandPanel() {
                 className="pointer-events-none absolute -right-28 -bottom-28 -z-10 hidden w-[560px] opacity-[0.05] grayscale lg:block"
             />
 
-            <div className="mx-auto flex h-full max-w-xl flex-col px-6 pt-8 pb-14 sm:px-10 lg:max-w-none lg:px-14 lg:py-10 xl:px-20">
+            <div className="mx-auto flex h-full max-w-xl flex-col lg:min-h-dvh px-6 pt-8 pb-14 sm:px-10 lg:max-w-none lg:px-14 lg:py-10 xl:px-20">
                 <header className="flex items-center gap-4">
                     <BrandLogos
                         size="md"
