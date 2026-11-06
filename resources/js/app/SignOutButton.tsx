@@ -1,46 +1,51 @@
-// Ends the session and returns to the login page. Used by both layouts.
-// One click starts one sign out. The button is disabled until the server answers, so a double
-// click or a slow network cannot send it twice.
-import { useRef, useState } from 'react';
+// Asks "Sign out?" first, then ends the session and returns to the login page. Used by both layouts.
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
+import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
 import { useAuthActions } from './auth';
 
 export function SignOutButton({ className = '' }: { className?: string }) {
     const { logout } = useAuthActions();
     const navigate = useNavigate();
-    const [busy, setBusy] = useState(false);
+    const [open, setOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [failed, setFailed] = useState(false);
-    const running = useRef(false);
 
     async function signOut() {
-        if (running.current) return;
-        running.current = true;
-        setBusy(true);
+        if (loading) return;
         setFailed(false);
+        setLoading(true);
         try {
             await logout();
         } catch {
-            running.current = false;
-            setBusy(false);
+            setLoading(false);
             setFailed(true);
             return;
         }
-        // Signed out: leave this page for good. The button stays disabled while it unmounts.
         await navigate('/login', { replace: true });
+    }
+
+    function cancel() {
+        setFailed(false);
+        setOpen(false);
     }
 
     return (
         <>
-            <button
-                type="button"
-                onClick={signOut}
-                disabled={busy}
-                aria-busy={busy || undefined}
-                className={`${className} disabled:cursor-wait disabled:opacity-60`}
-            >
-                {busy ? 'Signing out...' : 'Sign out'}
+            <button type="button" onClick={() => setOpen(true)} className={className}>
+                Sign out
             </button>
-            {failed && <p role="alert">Could not sign out. Try again.</p>}
+            <ConfirmDialog
+                open={open}
+                title="Sign out?"
+                description="You will need your email and password to sign in again."
+                confirmLabel="Sign out"
+                loadingLabel="Signing out..."
+                loading={loading}
+                error={failed ? 'Could not sign out. Try again.' : null}
+                onConfirm={signOut}
+                onCancel={cancel}
+            />
         </>
     );
 }

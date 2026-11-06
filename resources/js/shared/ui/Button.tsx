@@ -1,5 +1,5 @@
 // Shared button. Variants and sizes follow docs/DESIGN_SYSTEM.md section 5.
-import type { ButtonHTMLAttributes } from 'react';
+import type { ComponentProps } from 'react';
 import { Spinner } from './Spinner';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'duty';
@@ -14,7 +14,7 @@ const variants: Record<Variant, string> = {
     duty: 'bg-ember-600 text-white hover:bg-ember-700 active:bg-ember-800 disabled:bg-ember-600/60',
 };
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends ComponentProps<'button'> {
     variant?: Variant;
     size?: 'md' | 'lg';
     block?: boolean;

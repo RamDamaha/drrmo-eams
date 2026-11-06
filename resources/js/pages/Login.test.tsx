@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { HomeRedirect, RequireAuth } from '@/app/RequireAuth';
@@ -62,6 +62,14 @@ afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
 });
+
+// Opens the confirmation dialog, then confirms inside it.
+async function confirmSignOut() {
+    fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+    fireEvent.click(
+        within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Sign out' }),
+    );
+}
 
 describe('login flow', () => {
     it('sends a signed-out visitor to the login page', async () => {
@@ -128,7 +136,7 @@ describe('login flow', () => {
         vi.stubGlobal('fetch', fetchMock);
         renderAt('/me');
 
-        fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+        await confirmSignOut();
 
         expect(await screen.findByRole('button', { name: 'Sign in' })).toBeInTheDocument();
     });
@@ -141,7 +149,7 @@ describe('login flow', () => {
         vi.stubGlobal('fetch', fetchMock);
         renderAt('/me');
 
-        fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+        await confirmSignOut();
 
         expect(await screen.findByRole('button', { name: 'Sign in' })).toBeInTheDocument();
     });
@@ -154,7 +162,7 @@ describe('login flow', () => {
         vi.stubGlobal('fetch', fetchMock);
         renderAt('/me');
 
-        fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+        await confirmSignOut();
 
         expect(await screen.findByRole('alert')).toHaveTextContent(
             'Could not sign out. Try again.',
