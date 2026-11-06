@@ -22,6 +22,28 @@ const noRefresh = new Set([
 
 let refreshing: Promise<boolean> | null = null;
 
+// After sign out nothing may quietly sign the person back in, so a 401 no longer triggers a
+// refresh. Login lifts the block again.
+let refreshBlocked = false;
+
+export function blockRefresh(blocked: boolean): void {
+    refreshBlocked = blocked;
+}
+
+// Called when a signed-in call could not be saved by a refresh: the session is over for good.
+// The app clears all its state and the route guards send the person to the login page.
+type SessionEndedListener = () => void;
+const sessionEndedListeners = new Set<SessionEndedListener>();
+
+export function onSessionEnded(listener: SessionEndedListener): () => void {
+    sessionEndedListeners.add(listener);
+    return () => sessionEndedListeners.delete(listener);
+}
+
+function signalSessionEnded(): void {
+    sessionEndedListeners.forEach((listener) => listener());
+}
+
 // One refresh at a time. Every call that got a 401 meanwhile waits for the same answer.
 export function refreshSession(): Promise<boolean> {
     refreshing ??= fetch('/api/refresh', {
@@ -50,9 +72,13 @@ function send(path: string, init: RequestInit): Promise<Response> {
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     let response = await send(path, init);
 
-    // The access token lasts 15 minutes. On a 401, refresh once and try again.
-    if (response.status === 401 && !noRefresh.has(path) && (await refreshSession())) {
-        response = await send(path, init);
+    // The access token lasts 15 minutes. On a 401, refresh once and try again. If that does not
+    // work the session is over: tell the app so it can sign out cleanly.
+    if (response.status === 401 && !noRefresh.has(path) && !refreshBlocked) {
+        if (await refreshSession()) {
+            response = await send(path, init);
+        }
+        if (response.status === 401) signalSessionEnded();
     }
 
     const body = response.status === 204 ? null : await response.json().catch(() => null);

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\NoStoreApiResponses;
 use App\Http\Middleware\VerifyApiRequestOrigin;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -18,6 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // JWT in HttpOnly cookies (config/jwt.php). Every state changing API call must come from our origin.
         $middleware->api(append: [VerifyApiRequestOrigin::class]);
+        // Global, so even the 401 and 403 answers from the auth middleware carry it.
+        $middleware->append(NoStoreApiResponses::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

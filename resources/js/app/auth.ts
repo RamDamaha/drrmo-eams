@@ -1,6 +1,7 @@
 // Who is signed in. Calls /api/me, /api/login and /api/logout (Core).
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, ApiError } from '@/shared/api/client';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { api, ApiError, blockRefresh, onSessionEnded } from '@/shared/api/client';
 
 export interface Me {
     id: number;
@@ -18,6 +19,63 @@ export interface Me {
 }
 
 const meKey = ['me'] as const;
+
+// Other open tabs hear about sign in and sign out through this channel.
+const channelName = 'drrmo-auth';
+
+function broadcast(message: 'signed-out' | 'signed-in'): void {
+    if (typeof BroadcastChannel === 'undefined') return;
+    const channel = new BroadcastChannel(channelName);
+    channel.postMessage(message);
+    channel.close();
+}
+
+// Forget everything about the signed-in person. Every cached answer goes, not only "me", so data
+// of one user can never flash on screen for the next one. The route guards then show the login page.
+// queryClient.clear() would also drop the live "me" observer the guards listen to, so they would
+// never notice. This empties the same data but keeps that one observer attached.
+export function endSession(queryClient: QueryClient): void {
+    void queryClient.cancelQueries();
+    queryClient.getMutationCache().clear();
+    queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== meKey[0] });
+    queryClient.setQueryData(meKey, null);
+}
+
+// Watches for the session ending outside this component: a failed refresh, a sign out in another
+// tab, or a page restored from the browser's back/forward cache. Mount it once, inside the providers.
+export function useSessionWatcher(): void {
+    const queryClient = useQueryClient();
+
+    useEffect(() => {
+        const stop = onSessionEnded(() => endSession(queryClient));
+
+        const channel =
+            typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(channelName);
+        if (channel) {
+            channel.onmessage = (event: MessageEvent) => {
+                if (event.data === 'signed-out') {
+                    blockRefresh(true);
+                    endSession(queryClient);
+                } else if (event.data === 'signed-in') {
+                    blockRefresh(false);
+                    void queryClient.invalidateQueries({ queryKey: meKey });
+                }
+            };
+        }
+
+        // Back button after sign out can show a page from the browser's memory. Check again.
+        const onPageShow = (event: PageTransitionEvent) => {
+            if (event.persisted) void queryClient.invalidateQueries({ queryKey: meKey });
+        };
+        window.addEventListener('pageshow', onPageShow);
+
+        return () => {
+            stop();
+            channel?.close();
+            window.removeEventListener('pageshow', onPageShow);
+        };
+    }, [queryClient]);
+}
 
 // Returns null when nobody is signed in (401).
 async function fetchMe(): Promise<Me | null> {
@@ -67,20 +125,28 @@ export function useAuthActions() {
             method: 'POST',
             body: JSON.stringify({ email, password }),
         });
+        blockRefresh(false);
         queryClient.setQueryData(meKey, body.data);
+        broadcast('signed-in');
         return body.data;
     }
 
+    // The one sign out path. Only a 401 or 419 means "already signed out". Any other failure
+    // keeps the person signed in and is thrown, so the button can say so.
     async function logout(): Promise<void> {
+        blockRefresh(true);
         try {
             await api('/api/logout', { method: 'POST' });
         } catch (error) {
-            // A session that already ended (401) or an expired token (419) still counts as signed out.
             const ended =
                 error instanceof ApiError && (error.status === 401 || error.status === 419);
-            if (!ended) throw error;
+            if (!ended) {
+                blockRefresh(false);
+                throw error;
+            }
         }
-        queryClient.setQueryData(meKey, null);
+        endSession(queryClient);
+        broadcast('signed-out');
     }
 
     return { login, logout };

@@ -76,7 +76,11 @@ class RefreshTokens
         });
     }
 
-    /** Revoke the family of this token (sign out on this device). Returns the user id, if known. */
+    /**
+     * Revoke the family of this token (sign out on this device).
+     * Returns the user id when a live sign in was ended, or null when the token is unknown or
+     * was already revoked, so signing out twice is harmless and is not audited twice.
+     */
     public function revokeFamilyOf(string $plain): ?int
     {
         $token = RefreshToken::query()->where('token_hash', $this->hash($plain))->first();
@@ -84,9 +88,7 @@ class RefreshTokens
             return null;
         }
 
-        $this->revokeFamily($token->family_id);
-
-        return $token->user_id;
+        return $this->revokeFamily($token->family_id) > 0 ? $token->user_id : null;
     }
 
     /** Revoke every refresh token of a user (password reset, account disabled). */
@@ -98,9 +100,9 @@ class RefreshTokens
             ->update(['revoked_at' => now()]);
     }
 
-    private function revokeFamily(string $familyId): void
+    private function revokeFamily(string $familyId): int
     {
-        RefreshToken::query()
+        return RefreshToken::query()
             ->where('family_id', $familyId)
             ->whereNull('revoked_at')
             ->update(['revoked_at' => now()]);

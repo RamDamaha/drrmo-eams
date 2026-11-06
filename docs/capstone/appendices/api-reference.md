@@ -2,7 +2,7 @@
 
 Filled in per milestone. See ../../DOCUMENTATION_GUIDE.md. All endpoints are under `/api` and send and return JSON.
 
-Auth uses two HttpOnly cookies set by the server: `drrmo_access` (a JWT, 15 minutes) and `drrmo_refresh` (7 days, rotates on every use). Page scripts never read them. Every POST, PUT, PATCH and DELETE must send `X-Requested-With: XMLHttpRequest` and come from an allowed origin, or it gets 403 `bad_origin`. A signed-in endpoint answers 401 when the access token is missing, expired or revoked. The app then calls `POST /api/refresh` once and retries.
+Auth uses two HttpOnly cookies set by the server: `drrmo_access` (a JWT, 15 minutes) and `drrmo_refresh` (7 days, rotates on every use). Page scripts never read them. Every `/api` answer carries `Cache-Control: no-store, private`, so browsers and proxies never keep it. Every POST, PUT, PATCH and DELETE must send `X-Requested-With: XMLHttpRequest` and come from an allowed origin, or it gets 403 `bad_origin`. A signed-in endpoint answers 401 when the access token is missing, expired or revoked. The app then calls `POST /api/refresh` once and retries.
 
 ## Auth (Core)
 
@@ -10,7 +10,7 @@ Auth uses two HttpOnly cookies set by the server: `drrmo_access` (a JWT, 15 minu
 |---|---|---|---|
 | `POST /api/login` | anyone | `email`, `password` | 200 with the same body as `/api/me`, and both auth cookies. 422 `invalid_credentials` for a wrong password or a disabled account. 429 `too_many_attempts` after 5 failures in a minute for the same email and IP |
 | `POST /api/refresh` | anyone with a refresh cookie | none | 204 with new access and refresh cookies. 401 `session_ended` (and both cookies cleared) when the refresh token is missing, expired, revoked, reused or belongs to a disabled account. 429 after 30 calls in a minute from the same IP |
-| `POST /api/logout` | anyone | none | 204. Revokes the refresh token family, denylists the access token and clears both cookies. Also works with an expired access token |
+| `POST /api/logout` | anyone | none | 204, always, also when nobody is signed in or the access token has expired, so signing out never gets stuck. Revokes the whole refresh token family of this device, denylists the access token and clears both cookies with the same path, SameSite and Secure settings they were set with. Other devices stay signed in. Audited as `auth.logout` with the user as actor, once per real sign out |
 | `POST /api/register` | anyone | `first_name`, `last_name` (each required, trimmed, 100 characters at most), `email`, `password`, `password_confirmation`, `privacy_consent` (must be true) | 202 with `message`. Creates a volunteer with `account_status` pending_email and emails a 6 digit code. The answer is the same when the email is already used, and nothing is sent then. 422 for a weak or mismatched password (12 characters at least) or no consent. 429 `too_many_attempts` after 5 requests in an hour from the same IP |
 | `POST /api/register/verify` | anyone | `email`, `code` | 200 and the account becomes pending_approval. 422 `invalid_code` for a wrong, expired or unknown code. 422 `code_locked` after 5 wrong tries: ask for a new code. 429 after 10 tries in 10 minutes from the same IP |
 | `POST /api/register/resend` | anyone | `email` | 200 with the same `message` as register. Sends a new code only to an account still waiting to confirm its email, and at most once a minute. 429 after 3 calls in 10 minutes from the same IP |

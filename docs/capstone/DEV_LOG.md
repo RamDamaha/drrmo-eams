@@ -95,6 +95,17 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Evidence: tests/Feature/Personnel/RegistrationTest.php (success, wrong, expired and locked codes, duplicate email, throttle, forbidden for non-admins, audit of approve and reject, pending cannot sign in), resources/js/pages/RequestAccess.test.tsx
 - Paper: Chapter 3 (registration and approval design), Chapter 4 (security tests)
 
+## 2026-11-06 · Proper sign out (core)
+- What was built: one sign out path that clears all client state, stops quiet re-login, signs out other tabs, and keeps protected answers out of browser memory. The server cleans up the cookies exactly and audits the sign out with the right actor
+- Decision and why: sign out clears every cached answer, not only the user record. Before, the next person on a shared phone could briefly see data of the one before. `queryClient.clear()` would also detach the live user query the route guards listen to, so the same wipe is done by removing every query except that one
+- Decision and why: after sign out the token refresh is blocked until the next login. Without it, a request still in flight could get a 401, refresh and quietly sign the person back in
+- Decision and why: a refresh that fails during normal use now ends the session cleanly (clear state, go to login) instead of leaving a broken page. Sign out in one tab goes to the other tabs through a BroadcastChannel
+- Decision and why: `Cache-Control: no-store, private` on every `/api` answer, and a recheck when a page comes back from the back/forward cache, so Back never shows a protected page after sign out
+- Decision and why: the audit row `auth.logout` now has the user as actor (it had none because the route has no auth middleware) and is written once. A second sign out with the same old cookies is a harmless 204 and is not audited again
+- Decision kept: only 401 and 419 count as already signed out. Other failures keep the person signed in with a message. No idle timeout and no sign out on all devices yet
+- Evidence: tests/Feature/Core/SignOutTest.php (cookie attributes, idempotent, audit actor, refresh-only sign out, rotated tokens, other devices, no-store), resources/js/app/signOut.test.tsx and resources/js/shared/api/client.test.ts (cache clearing, double click, other tabs, no refresh after sign out, failed refresh, page restore)
+- Paper: Chapter 3 (session handling), Chapter 4 (security tests)
+
 ## 2026-11-06 · First name and last name instead of one name (personnel)
 - What was built: `users.name` is replaced by `first_name` and `last_name` (migration `200006`). Request access asks for both. The API returns both plus a combined `name` for display, so emails, the audit text and the admin list still show "First Last"
 - Decision and why: the owner asked for two fields, in the form and in the database, so records can be sorted and searched by last name and imports can match them

@@ -37,6 +37,9 @@ Below 1024 px the sidebar collapses to icons. Below 768 px it becomes a top menu
 ```
 Tap targets at least 48 px. Base font 16 px, high contrast for outdoor use. On screens wider than 768 px the content sits in a centered 640 px column.
 
+**Sign out button (both layouts)**
+One tap starts one sign out. The label changes to "Signing out..." and the button is disabled until the server answers, so a double tap or a slow network cannot send it twice. On success the person lands on the sign in screen and every other open tab follows. If the server cannot be reached or fails, the person stays signed in and sees "Could not sign out. Try again."
+
 ---
 
 ## Admin screens (desktop first)
