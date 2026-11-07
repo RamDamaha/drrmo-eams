@@ -1,13 +1,37 @@
 // A-Events list (SCREENS.md). Admin sees every event, newest first.
+// Active events (draft and published) come first. Cancelled and completed ones sit behind their own tabs.
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router';
-import { listEvents } from '@/features/events/api';
+import { Link, useSearchParams } from 'react-router';
+import { listEvents, type EventSummary } from '@/features/events/api';
 import { CalendarIcon, PlusIcon, SlidersIcon } from '@/features/events/components/icons';
 import { chipClass, schedule, statuses } from '@/features/events/format';
 import { Alert } from '@/shared/ui/Alert';
 import { Button } from '@/shared/ui/Button';
 
 const headCell = 'px-5 py-3 text-xs font-semibold tracking-wide text-stone-500 uppercase';
+
+type View = 'active' | 'cancelled' | 'completed';
+
+const views: { id: View; label: string; empty: string; match: EventSummary['status'][] }[] = [
+    {
+        id: 'active',
+        label: 'Active',
+        empty: 'No active events. Drafts and published events show here.',
+        match: ['draft', 'published'],
+    },
+    {
+        id: 'completed',
+        label: 'Completed',
+        empty: 'No completed events yet.',
+        match: ['completed'],
+    },
+    {
+        id: 'cancelled',
+        label: 'Cancelled',
+        empty: 'No cancelled events.',
+        match: ['cancelled'],
+    },
+];
 
 function SkeletonRows() {
     return (
@@ -39,7 +63,13 @@ function SkeletonRows() {
 
 export function Events() {
     const list = useQuery({ queryKey: ['events'], queryFn: listEvents });
-    const events = list.data ?? [];
+    const all = list.data ?? [];
+    const [params, setParams] = useSearchParams();
+    const view = views.find((v) => v.id === params.get('view')) ?? views[0];
+    const count = (v: (typeof views)[number]) =>
+        all.filter((event) => v.match.includes(event.status)).length;
+    const events = all.filter((event) => view.match.includes(event.status));
+    const active = view.id === 'active';
 
     return (
         <div className="mx-auto max-w-[1440px]">
@@ -76,7 +106,7 @@ export function Events() {
                         {list.isFetching ? 'Retrying...' : 'Retry'}
                     </Button>
                 </div>
-            ) : list.isSuccess && events.length === 0 ? (
+            ) : list.isSuccess && all.length === 0 ? (
                 <div className="mt-8 flex flex-col items-center rounded-card bg-white px-6 py-16 text-center ring-1 ring-stone-200">
                     <span className="flex size-12 items-center justify-center rounded-control border border-stone-200 text-maroon-700">
                         <CalendarIcon className="size-6" />
@@ -94,11 +124,51 @@ export function Events() {
                 </div>
             ) : (
                 <section className="mt-8" aria-busy={list.isPending || undefined}>
-                    <p className="mb-3 text-sm text-stone-600" aria-live="polite">
-                        {list.isPending
-                            ? 'Loading events...'
-                            : `${events.length} ${events.length === 1 ? 'event' : 'events'}`}
-                    </p>
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                        <div
+                            className="inline-flex rounded-control bg-stone-100 p-1"
+                            aria-label="Show events"
+                            role="group"
+                        >
+                            {views.map((v) => {
+                                const selected = v.id === view.id;
+                                return (
+                                    <button
+                                        key={v.id}
+                                        type="button"
+                                        aria-pressed={selected}
+                                        onClick={() =>
+                                            setParams(v.id === 'active' ? {} : { view: v.id }, {
+                                                replace: true,
+                                            })
+                                        }
+                                        className={`inline-flex min-h-9 items-center gap-2 rounded-[6px] px-3 text-sm font-semibold transition-colors ${selected ? 'bg-white text-stone-900 ring-1 ring-stone-200' : 'text-stone-600 hover:text-stone-900'}`}
+                                    >
+                                        {v.label}
+                                        {list.isSuccess && (
+                                            <span
+                                                className={`text-xs tabular-nums ${selected ? 'text-stone-600' : 'text-stone-500'}`}
+                                            >
+                                                {count(v)}
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <p className="text-sm text-stone-600" aria-live="polite">
+                            {list.isPending
+                                ? 'Loading events...'
+                                : `${events.length} ${events.length === 1 ? 'event' : 'events'}`}
+                        </p>
+                    </div>
+                    {!active && (
+                        <p className="mb-3 text-sm text-stone-600">
+                            {view.id === 'cancelled'
+                                ? 'Cancelled events are kept for the record. Their duties and people can no longer change.'
+                                : 'Completed events are kept for the record and reports.'}
+                        </p>
+                    )}
                     <div className="overflow-x-auto rounded-card bg-white ring-1 ring-stone-200">
                         <table className="w-full min-w-[880px] text-left">
                             <thead className="border-b border-stone-200">
@@ -125,6 +195,16 @@ export function Events() {
                             </thead>
                             <tbody className="divide-y divide-stone-100">
                                 {list.isPending && <SkeletonRows />}
+                                {list.isSuccess && events.length === 0 && (
+                                    <tr>
+                                        <td
+                                            colSpan={6}
+                                            className="px-5 py-10 text-center text-sm text-stone-600"
+                                        >
+                                            {view.empty}
+                                        </td>
+                                    </tr>
+                                )}
                                 {events.map((event) => {
                                     const when = schedule(event.starts_at, event.ends_at);
                                     const status = statuses[event.status];
@@ -136,7 +216,7 @@ export function Events() {
                                             <td className="max-w-md px-5 py-3.5">
                                                 <Link
                                                     to={`/admin/events/${event.id}`}
-                                                    className="rounded-sm font-medium text-stone-900 underline-offset-2 transition-colors hover:text-maroon-700 hover:underline"
+                                                    className={`rounded-sm font-medium underline-offset-2 transition-colors hover:text-maroon-700 hover:underline ${active ? 'text-stone-900' : 'text-stone-600'}`}
                                                 >
                                                     {event.title}
                                                 </Link>
@@ -164,14 +244,24 @@ export function Events() {
                                                 </span>
                                             </td>
                                             <td className="px-5 py-3.5 text-right whitespace-nowrap">
-                                                <Link
-                                                    to={`/admin/events/${event.id}`}
-                                                    aria-label={`Configure duties and people for ${event.title}`}
-                                                    className="inline-flex min-h-9 items-center gap-1.5 rounded-control border border-stone-300 bg-white px-3 text-sm font-semibold text-stone-800 transition-colors hover:border-maroon-700 hover:bg-maroon-50 hover:text-maroon-800"
-                                                >
-                                                    <SlidersIcon className="size-4" />
-                                                    Configure
-                                                </Link>
+                                                {active ? (
+                                                    <Link
+                                                        to={`/admin/events/${event.id}`}
+                                                        aria-label={`Configure duties and people for ${event.title}`}
+                                                        className="inline-flex min-h-9 items-center gap-1.5 rounded-control border border-stone-300 bg-white px-3 text-sm font-semibold text-stone-800 transition-colors hover:border-maroon-700 hover:bg-maroon-50 hover:text-maroon-800"
+                                                    >
+                                                        <SlidersIcon className="size-4" />
+                                                        Configure
+                                                    </Link>
+                                                ) : (
+                                                    <Link
+                                                        to={`/admin/events/${event.id}`}
+                                                        aria-label={`View ${event.title}`}
+                                                        className="inline-flex min-h-9 items-center rounded-control px-3 text-sm font-semibold text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900"
+                                                    >
+                                                        View
+                                                    </Link>
+                                                )}
                                             </td>
                                         </tr>
                                     );

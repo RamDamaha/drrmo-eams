@@ -1079,6 +1079,23 @@ export function EventDetail() {
                 <EventActions event={data} />
             </header>
 
+            {data.status === 'cancelled' && (
+                <div className="mt-6 max-w-3xl">
+                    <Alert tone="warning">
+                        This event was cancelled. Its duties and people are kept for the record and
+                        can no longer change.
+                    </Alert>
+                </div>
+            )}
+
+            {data.status === 'completed' && (
+                <div className="mt-6 max-w-3xl">
+                    <Alert tone="info">
+                        This event is completed. Its duties and people are kept for the record.
+                    </Alert>
+                </div>
+            )}
+
             {data.status === 'draft' && (
                 <div className="mt-6 max-w-3xl">
                     <Alert tone="info">

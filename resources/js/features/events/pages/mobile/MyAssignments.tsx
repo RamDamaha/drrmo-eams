@@ -168,8 +168,10 @@ export function MyAssignments() {
 
     const [now] = useState(() => Date.now());
     const all = duties.data ?? [];
-    const upcoming = all.filter((duty) => new Date(duty.ends_at).getTime() >= now);
-    const past = all.filter((duty) => new Date(duty.ends_at).getTime() < now).reverse();
+    const live = all.filter((duty) => duty.event.status !== 'cancelled');
+    const cancelled = all.filter((duty) => duty.event.status === 'cancelled');
+    const upcoming = live.filter((duty) => new Date(duty.ends_at).getTime() >= now);
+    const past = live.filter((duty) => new Date(duty.ends_at).getTime() < now).reverse();
 
     return (
         <div>
@@ -215,10 +217,34 @@ export function MyAssignments() {
                         <DutyList title="Upcoming" duties={upcoming} />
                     ) : (
                         <p className="mt-6 rounded-card bg-white px-4 py-4 text-base text-stone-600 ring-1 ring-stone-200">
-                            No upcoming duties. Past duties are listed below.
+                            No upcoming duties.
                         </p>
                     )}
                     {past.length > 0 && <DutyList title="Past" duties={past} />}
+                    {cancelled.length > 0 && (
+                        <details className="group mt-8 border-t border-stone-200 pt-4">
+                            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-control text-base font-semibold text-stone-700 [&::-webkit-details-marker]:hidden">
+                                <span>
+                                    Cancelled{' '}
+                                    <span className="text-sm font-normal text-stone-500 tabular-nums">
+                                        {cancelled.length}
+                                    </span>
+                                </span>
+                                <span className="text-sm font-medium text-maroon-700">
+                                    <span className="group-open:hidden">Show</span>
+                                    <span className="hidden group-open:inline">Hide</span>
+                                </span>
+                            </summary>
+                            <p className="mt-1 text-sm text-stone-600">
+                                These events were called off. You do not need to report for them.
+                            </p>
+                            <ul className="mt-3 grid gap-3 lg:grid-cols-2">
+                                {cancelled.map((duty) => (
+                                    <DutyCard key={duty.id} duty={duty} />
+                                ))}
+                            </ul>
+                        </details>
+                    )}
                 </>
             )}
         </div>
