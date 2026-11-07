@@ -134,7 +134,7 @@ Tags: module (`core`, `personnel`, `access`, `events`, `notifications`, `monitor
 - Later (needs S4.1): the "not on duty" list shows people whose duty never started. Until start duty exists, it lists everyone not yet started, so it is not accurate.
 
 **S3.9 Calendar view** `events` `desktop` **S**
-- Admin sees a month grid of events from `GET /api/events/calendar`. Click an event to open it.
+- Admin sees events by month, week or day from `GET /api/events/calendar`, through a List and Calendar switch on the Events page (no separate sidebar link). Click an event to open it.
 - Done: working plain version. Later: design pass (week and day views, staffing bars, filters).
 - Done: published events become completed after they end (`events:complete-ended`).
 

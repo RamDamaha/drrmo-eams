@@ -1,6 +1,5 @@
-import type { RouteObject } from 'react-router';
+import { Navigate, type RouteObject } from 'react-router';
 import { useMe } from '@/app/auth';
-import { Calendar } from './pages/admin/Calendar';
 import { Dashboard } from './pages/admin/Dashboard';
 import { Events } from './pages/admin/Events';
 import { EventNotices } from './pages/mobile/EventNotices';
@@ -20,7 +19,8 @@ export const dashboardRoute: RouteObject = { index: true, element: <Dashboard />
 
 // Added to the admin layout in the Core router.
 export const adminEventRoutes: RouteObject[] = [
-    { path: 'calendar', element: <Calendar /> },
+    // The calendar now lives on the Events page. Old links still land there.
+    { path: 'calendar', element: <Navigate to="/admin/events?show=calendar" replace /> },
     { path: 'events', element: <Events /> },
     { path: 'events/new', element: <NewEvent /> },
     { path: 'events/:id/edit', element: <NewEvent /> },

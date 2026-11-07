@@ -1,9 +1,10 @@
-// A-Events list (SCREENS.md). Admin sees every event, newest first.
+// A-Events list (SCREENS.md). Admin sees every event, newest first, as a list or a calendar.
 // Active events (draft and published) come first. Cancelled and completed ones sit behind their own tabs.
 import { useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router';
 import { listEvents, type EventSummary } from '@/features/events/api';
-import { CalendarIcon, PlusIcon, SlidersIcon } from '@/features/events/components/icons';
+import { CalendarIcon, ListIcon, PlusIcon, SlidersIcon } from '@/features/events/components/icons';
+import { EventsCalendar } from '@/features/events/components/EventsCalendar';
 import { chipClass, schedule, statuses } from '@/features/events/format';
 import { Alert } from '@/shared/ui/Alert';
 import { Button } from '@/shared/ui/Button';
@@ -61,10 +62,16 @@ function SkeletonRows() {
     );
 }
 
+const displays = [
+    { id: 'list', label: 'List', icon: ListIcon },
+    { id: 'calendar', label: 'Calendar', icon: CalendarIcon },
+] as const;
+
 export function Events() {
-    const list = useQuery({ queryKey: ['events'], queryFn: listEvents });
-    const all = list.data ?? [];
     const [params, setParams] = useSearchParams();
+    const calendar = params.get('show') === 'calendar';
+    const list = useQuery({ queryKey: ['events'], queryFn: listEvents, enabled: !calendar });
+    const all = list.data ?? [];
     const view = views.find((v) => v.id === params.get('view')) ?? views[0];
     const count = (v: (typeof views)[number]) =>
         all.filter((event) => v.match.includes(event.status)).length;
@@ -83,16 +90,48 @@ export function Events() {
                         Campus events that need DRRMO personnel.
                     </p>
                 </div>
-                <Link
-                    to="/admin/events/new"
-                    className="inline-flex min-h-10 items-center gap-1.5 rounded-control bg-maroon-700 pr-4 pl-3 text-sm font-semibold text-white transition-colors hover:bg-maroon-800 active:bg-maroon-900"
-                >
-                    <PlusIcon />
-                    New event
-                </Link>
+                <div className="flex flex-wrap items-center gap-3">
+                    <div
+                        className="inline-flex rounded-control bg-stone-100 p-1"
+                        role="group"
+                        aria-label="Show events as"
+                    >
+                        {displays.map((d) => {
+                            const selected = (d.id === 'calendar') === calendar;
+                            const Icon = d.icon;
+                            return (
+                                <button
+                                    key={d.id}
+                                    type="button"
+                                    aria-pressed={selected}
+                                    onClick={() =>
+                                        setParams(d.id === 'calendar' ? { show: 'calendar' } : {}, {
+                                            replace: true,
+                                        })
+                                    }
+                                    className={`inline-flex min-h-8 items-center gap-1.5 rounded-[6px] px-3 text-sm font-semibold transition-colors ${selected ? 'bg-white text-stone-900 ring-1 ring-stone-200' : 'text-stone-600 hover:text-stone-900'}`}
+                                >
+                                    <Icon className="size-4" />
+                                    {d.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <Link
+                        to="/admin/events/new"
+                        className="inline-flex min-h-10 items-center gap-1.5 rounded-control bg-maroon-700 pr-4 pl-3 text-sm font-semibold text-white transition-colors hover:bg-maroon-800 active:bg-maroon-900"
+                    >
+                        <PlusIcon />
+                        New event
+                    </Link>
+                </div>
             </header>
 
-            {list.isError ? (
+            {calendar ? (
+                <section className="mt-8" aria-label="Event calendar">
+                    <EventsCalendar />
+                </section>
+            ) : list.isError ? (
                 <div className="mt-8 max-w-xl space-y-3">
                     <Alert tone="error">
                         The events did not load. Check your connection and try again.

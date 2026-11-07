@@ -4,7 +4,6 @@ import { SignOutButton } from '@/app/SignOutButton';
 const items = [
     { to: '/admin', label: 'Dashboard' },
     { to: '/admin/events', label: 'Events' },
-    { to: '/admin/calendar', label: 'Calendar' },
     { to: '/admin/people', label: 'People' },
     { to: '/admin/requests', label: 'Access requests' },
     { to: '/admin/map', label: 'Map' },

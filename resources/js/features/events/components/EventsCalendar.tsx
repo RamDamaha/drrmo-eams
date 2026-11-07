@@ -1,5 +1,6 @@
-// A-Calendar. Month, week and day views of every event, with how many places are filled.
-// View, day and filters live in the address bar, so a link opens the same page.
+// The calendar half of A-Events list (SCREENS.md): month, week and day views of every event,
+// with how many places are filled. Range, day and filters live in the address bar, so a link
+// opens the same page. The Events page owns the title and the List and Calendar switch.
 // Desktop first. Under 768 px the month becomes a compact grid with the chosen day listed below it,
 // and the week becomes a list of days.
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
@@ -30,7 +31,6 @@ import {
     CheckIcon,
     ChevronIcon,
     PinIcon,
-    PlusIcon,
     SlidersIcon,
 } from '@/features/events/components/icons';
 import { chipClass, statuses } from '@/features/events/format';
@@ -725,10 +725,10 @@ function FilterSelect({
 const navButton =
     'flex size-10 items-center justify-center text-stone-700 transition-colors hover:bg-stone-50 hover:text-stone-900 active:bg-stone-100';
 
-export function Calendar() {
+export function EventsCalendar() {
     const [params, setParams] = useSearchParams();
     const view: CalendarView =
-        calendarViews.find((v) => v.id === params.get('view'))?.id ?? 'month';
+        calendarViews.find((v) => v.id === params.get('range'))?.id ?? 'month';
     const anchor = parseDayKey(params.get('date')) ?? startOfDay(new Date());
     const filters: CalendarFilters = {
         status: params.get('status') ?? '',
@@ -766,33 +766,14 @@ export function Calendar() {
     const short = inRange.filter(needsPeople).length;
     const loading = calendar.isPending;
 
-    const openDay = (day: Date) => update({ view: 'day', date: dayKey(day) });
+    const openDay = (day: Date) => update({ range: 'day', date: dayKey(day) });
     const unit = view;
     const label = rangeLabel(view, anchor);
     const showsToday = days.some((day) => sameDay(day, new Date()));
 
     return (
-        <div className="mx-auto max-w-[1440px]">
-            <header className="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                    <div className="brand-stripe h-1 w-12 rounded-full" aria-hidden="true" />
-                    <h1 className="mt-4 text-2xl font-semibold tracking-tight text-stone-900">
-                        Calendar
-                    </h1>
-                    <p className="mt-1 text-pretty text-stone-600">
-                        Every event by day, with how many places are filled.
-                    </p>
-                </div>
-                <Link
-                    to="/admin/events/new"
-                    className="inline-flex min-h-10 items-center gap-1.5 rounded-control bg-maroon-700 pr-4 pl-3 text-sm font-semibold text-white transition-colors hover:bg-maroon-800 active:bg-maroon-900"
-                >
-                    <PlusIcon />
-                    New event
-                </Link>
-            </header>
-
-            <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3">
+        <div>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
                 <FilterSelect
                     label="Status"
                     value={filters.status}
@@ -934,7 +915,9 @@ export function Calendar() {
                                     key={v.id}
                                     type="button"
                                     aria-pressed={selected}
-                                    onClick={() => update({ view: v.id === 'month' ? null : v.id })}
+                                    onClick={() =>
+                                        update({ range: v.id === 'month' ? null : v.id })
+                                    }
                                     className={`inline-flex min-h-8 flex-1 items-center justify-center rounded-[6px] px-3.5 text-sm sm:flex-none font-semibold transition-colors ${selected ? 'bg-white text-stone-900 ring-1 ring-stone-200' : 'text-stone-600 hover:text-stone-900'}`}
                                 >
                                     {v.label}
