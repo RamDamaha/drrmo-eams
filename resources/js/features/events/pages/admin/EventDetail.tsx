@@ -1,7 +1,7 @@
 // A-Event detail (SCREENS.md). Admin sees the event with Marshals and Volunteers side by side.
 // Each side lists its duties with the people in them, and one form assigns a person to a duty.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
 import {
     assignPerson,
@@ -97,14 +97,33 @@ const failMessage = (failure: unknown) =>
         ? 'That did not work. The duty may be full or the person already assigned. Refresh and try again.'
         : 'That did not work. Check your connection and try again.';
 
+function OpenSpot() {
+    return (
+        <span
+            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-dashed border-stone-300 text-stone-400"
+            aria-hidden="true"
+        >
+            <PlusIcon className="size-4" />
+        </span>
+    );
+}
+
+const stillNeeded = (open: number, labels: { plural: string; one: string }) =>
+    `${open} ${open === 1 ? labels.one : labels.plural.toLowerCase()} still needed`;
+
 // One duty inside a role column: a quiet header row, then the people in it.
 function DutyGroup({
     requirement,
     editable,
+    selected,
+    onPick,
     onError,
 }: {
     requirement: Requirement;
     editable: boolean;
+    // True when the Add form below has this duty picked.
+    selected: boolean;
+    onPick: () => void;
     onError: (message: string | null) => void;
 }) {
     const queryClient = useQueryClient();
@@ -130,7 +149,9 @@ function DutyGroup({
 
     return (
         <li>
-            <div className="flex items-start justify-between gap-4 border-t border-stone-200 bg-stone-50 px-6 py-2.5">
+            <div
+                className={`flex items-start justify-between gap-4 border-t border-stone-200 px-6 py-2.5 transition-colors ${selected ? 'bg-maroon-50' : 'bg-stone-50'}`}
+            >
                 <div className="min-w-0">
                     <h3 className="text-sm font-semibold text-stone-900">
                         {dutyName(requirement)}
@@ -163,11 +184,16 @@ function DutyGroup({
                             {dropDuty.isPending ? 'Deleting...' : 'Delete'}
                         </button>
                     )}
-                    <p
-                        className={`text-sm tabular-nums ${open === 0 ? 'font-semibold text-green-800' : 'text-stone-600'}`}
-                    >
-                        {filled} of {requirement.headcount}
-                    </p>
+                    {open === 0 ? (
+                        <span className={`${chipClass} bg-green-50 text-green-800 ring-green-200`}>
+                            Full, {filled} of {requirement.headcount}
+                        </span>
+                    ) : (
+                        <p className="text-sm text-stone-600 tabular-nums">
+                            <span className="font-semibold text-stone-900">{filled}</span> of{' '}
+                            {requirement.headcount}
+                        </p>
+                    )}
                 </div>
             </div>
             <ul className="divide-y divide-stone-100">
@@ -210,8 +236,25 @@ function DutyGroup({
                     );
                 })}
                 {open > 0 && (
-                    <li className="px-6 py-2.5 text-sm text-stone-500">
-                        {open} {open === 1 ? labels.one : labels.plural.toLowerCase()} still needed
+                    <li>
+                        {editable ? (
+                            <button
+                                type="button"
+                                onClick={onPick}
+                                className="group flex w-full items-center gap-3 px-6 py-2.5 text-left text-sm text-stone-600 transition-colors hover:bg-maroon-50"
+                            >
+                                <OpenSpot />
+                                <span className="flex-1">{stillNeeded(open, labels)}</span>
+                                <span className="font-semibold text-maroon-700 group-hover:underline">
+                                    Fill a spot
+                                </span>
+                            </button>
+                        ) : (
+                            <p className="flex items-center gap-3 px-6 py-2.5 text-sm text-stone-500">
+                                <OpenSpot />
+                                {stillNeeded(open, labels)}
+                            </p>
+                        )}
                     </li>
                 )}
             </ul>
@@ -219,21 +262,21 @@ function DutyGroup({
     );
 }
 
-// Pick the duty, then the person. With one open duty it is already picked.
-function AssignForm({ role, requirements }: { role: Role; requirements: Requirement[] }) {
+interface AssignProps {
+    role: Role;
+    openDuties: Requirement[];
+    dutyId: string;
+    onPick: (id: string) => void;
+    // Goes up by one each time "Fill a spot" is clicked, to bring the person list into focus.
+    focusRequest: number;
+}
+
+// Pick the duty, then the person. "Fill a spot" on a duty picks it here.
+function AssignForm({ role, openDuties, dutyId, onPick, focusRequest }: AssignProps) {
     const queryClient = useQueryClient();
     const labels = roleLabels[role];
-    const openDuties = requirements.filter((r) => r.assignments.length < r.headcount);
-    const [picked, setPicked] = useState('');
     const [userId, setUserId] = useState('');
     const [error, setError] = useState<string | null>(null);
-
-    const dutyId =
-        picked && openDuties.some((r) => String(r.id) === picked)
-            ? picked
-            : openDuties.length === 1
-              ? String(openDuties[0].id)
-              : '';
 
     const candidates = useQuery({
         queryKey: ['requirement-candidates', Number(dutyId)],
@@ -260,6 +303,15 @@ function AssignForm({ role, requirements }: { role: Role; requirements: Requirem
     }
 
     const options = (candidates.data ?? []).filter((person) => person.role === role);
+    const ready = candidates.isSuccess;
+
+    useEffect(() => {
+        if (focusRequest === 0) return;
+        const field = document.getElementById(`${role}-person`);
+        field?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        if (ready) field?.focus({ preventScroll: true });
+    }, [focusRequest, ready, role]);
+
     const personPlaceholder = !dutyId
         ? 'Choose a duty first'
         : !candidates.isSuccess
@@ -282,7 +334,7 @@ function AssignForm({ role, requirements }: { role: Role; requirements: Requirem
                     placeholder={openDuties.length ? 'Choose a duty' : 'All duties are full'}
                     value={dutyId}
                     onChange={(e) => {
-                        setPicked(e.target.value);
+                        onPick(e.target.value);
                         setUserId('');
                     }}
                     disabled={openDuties.length === 0}
@@ -526,7 +578,17 @@ interface ColumnProps {
 function RoleColumn({ event, role, requirements, editable, taskTypes }: ColumnProps) {
     const [adding, setAdding] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [picked, setPicked] = useState('');
+    const [focusRequest, setFocusRequest] = useState(0);
     const labels = roleLabels[role];
+    const openDuties = requirements.filter((r) => r.assignments.length < r.headcount);
+    // A picked duty that filled up falls back to the only open one, or to none.
+    const dutyId =
+        picked && openDuties.some((r) => String(r.id) === picked)
+            ? picked
+            : openDuties.length === 1
+              ? String(openDuties[0].id)
+              : '';
     const headingId = `${role}-heading`;
     const needed = requirements.reduce((sum, r) => sum + r.headcount, 0);
     const assigned = requirements.reduce(
@@ -534,28 +596,56 @@ function RoleColumn({ event, role, requirements, editable, taskTypes }: ColumnPr
         0,
     );
     const canAdd = editable && taskTypes !== undefined;
+    const percent = needed ? Math.round((assigned / needed) * 100) : 0;
 
     return (
         <section
             aria-labelledby={headingId}
             className="flex flex-col rounded-card bg-white ring-1 ring-stone-200"
         >
-            <header className="flex items-center justify-between gap-4 px-6 py-4">
-                <div>
-                    <h2 id={headingId} className="text-lg font-semibold text-stone-900">
-                        {labels.plural}
-                    </h2>
-                    <p className="text-sm text-stone-600 tabular-nums">
-                        {requirements.length === 0
-                            ? 'No duties yet'
-                            : `${assigned} of ${needed} assigned, ${requirements.length} ${requirements.length === 1 ? 'duty' : 'duties'}`}
-                    </p>
+            <header className="px-6 py-4">
+                <div className="flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                        <h2 id={headingId} className="text-lg font-semibold text-stone-900">
+                            {labels.plural}
+                        </h2>
+                        <p className="text-sm text-stone-600 tabular-nums">
+                            {requirements.length === 0
+                                ? 'No duties yet'
+                                : `${requirements.length} ${requirements.length === 1 ? 'duty' : 'duties'}, ${needed - assigned === 0 ? 'all spots filled' : `${needed - assigned} ${needed - assigned === 1 ? 'spot' : 'spots'} open`}`}
+                        </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-4">
+                        {needed > 0 && (
+                            <p className="text-right text-sm text-stone-600 tabular-nums">
+                                <span className="text-2xl font-semibold tracking-tight text-stone-900">
+                                    {assigned}
+                                </span>{' '}
+                                / {needed}
+                            </p>
+                        )}
+                        {canAdd && !adding && (
+                            <Button variant="secondary" size="md" onClick={() => setAdding(true)}>
+                                <PlusIcon className="size-4" />
+                                Add duty
+                            </Button>
+                        )}
+                    </div>
                 </div>
-                {canAdd && !adding && (
-                    <Button variant="ghost" size="md" onClick={() => setAdding(true)}>
-                        <PlusIcon className="size-4" />
-                        Add duty
-                    </Button>
+                {needed > 0 && (
+                    <div
+                        className="mt-3 h-1.5 overflow-hidden rounded-full bg-stone-100"
+                        role="progressbar"
+                        aria-label={`${labels.plural} assigned`}
+                        aria-valuemin={0}
+                        aria-valuemax={needed}
+                        aria-valuenow={assigned}
+                    >
+                        <div
+                            className={`h-full rounded-full transition-[width] duration-200 ${assigned === needed ? 'bg-green-700' : 'bg-maroon-700'}`}
+                            style={{ width: `${percent}%` }}
+                        />
+                    </div>
                 )}
             </header>
 
@@ -593,6 +683,11 @@ function RoleColumn({ event, role, requirements, editable, taskTypes }: ColumnPr
                             key={requirement.id}
                             requirement={requirement}
                             editable={editable}
+                            selected={String(requirement.id) === dutyId}
+                            onPick={() => {
+                                setPicked(String(requirement.id));
+                                setFocusRequest((n) => n + 1);
+                            }}
                             onError={setError}
                         />
                     ))}
@@ -606,7 +701,13 @@ function RoleColumn({ event, role, requirements, editable, taskTypes }: ColumnPr
             )}
 
             {editable && requirements.length > 0 && (
-                <AssignForm role={role} requirements={requirements} />
+                <AssignForm
+                    role={role}
+                    openDuties={openDuties}
+                    dutyId={dutyId}
+                    onPick={setPicked}
+                    focusRequest={focusRequest}
+                />
             )}
         </section>
     );
