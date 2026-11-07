@@ -22,7 +22,7 @@ beforeEach(function () {
     $this->seed(PermissionSeeder::class);
     $this->withHeaders(['Referer' => 'http://localhost', 'X-Requested-With' => 'XMLHttpRequest']);
     $this->mail = new FakeMailSender;
-    $this->app->instance(MailSender::class, $this->mail);
+    app()->instance(MailSender::class, $this->mail);
 });
 
 function resetTokenFor(User $user): string
