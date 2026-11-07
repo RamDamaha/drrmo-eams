@@ -17,8 +17,8 @@ return new class extends Migration
             $table->foreignId('campus_location_id')->constrained()->restrictOnDelete();
             // Null means campus wide.
             $table->foreignId('department_id')->nullable()->constrained()->restrictOnDelete();
-            $table->timestamp('starts_at');
-            $table->timestamp('ends_at');
+            $table->dateTime('starts_at');
+            $table->dateTime('ends_at');
             $table->string('status', 16)->default('draft');
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
