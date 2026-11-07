@@ -6,10 +6,13 @@ namespace App\Modules\Events\Http\Controllers;
 
 use App\Modules\Events\Enums\EventStatus;
 use App\Modules\Events\Http\Requests\StoreEventRequest;
+use App\Modules\Events\Http\Requests\UpdateEventRequest;
 use App\Modules\Events\Http\Resources\EventResource;
 use App\Modules\Events\Models\Event;
 use App\Modules\Personnel\Models\User;
 use App\Modules\Records\Contracts\AuditLogger;
+use BackedEnum;
+use DateTimeInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Gate;
@@ -40,7 +43,30 @@ class EventController
     {
         Gate::authorize('viewAny', Event::class);
 
-        return new EventResource($event->load(['location', 'requirements' => fn ($q) => $q->with(['dutyType', 'assignments' => fn ($a) => $a->with(['user.role', 'dutyType'])->orderBy('id')])->orderBy('shift_starts_at')->orderBy('id')]));
+        return new EventResource($event->load(['location', 'requirements' => fn ($q) => $q->with(['dutyType', 'assignments' => fn ($a) => $a->where('status', '!=', 'cancelled')->with(['user.role', 'dutyType'])->orderBy('id')])->orderBy('shift_starts_at')->orderBy('id')]));
+    }
+
+    public function update(UpdateEventRequest $request, Event $event, AuditLogger $audit): EventResource
+    {
+        abort_unless(in_array($event->status, [EventStatus::Draft, EventStatus::Published], true), 422, 'A cancelled or completed event cannot be edited.');
+
+        $data = $request->utcData();
+        $before = array_map($this->plain(...), $event->only(array_keys($data)));
+        $event->update($data);
+        $after = array_map($this->plain(...), $event->only(array_keys($data)));
+        $changed = array_keys(array_diff_assoc($after, $before));
+        $audit->log('event.updated', $event, meta: ['before' => array_intersect_key($before, array_flip($changed)), 'after' => array_intersect_key($after, array_flip($changed))]);
+
+        return new EventResource($event->load('location'));
+    }
+
+    private function plain(mixed $v): string
+    {
+        return match (true) {
+            $v instanceof BackedEnum => (string) $v->value,
+            $v instanceof DateTimeInterface => $v->format('c'),
+            default => (string) $v,
+        };
     }
 
     public function publish(Event $event, AuditLogger $audit): EventResource
