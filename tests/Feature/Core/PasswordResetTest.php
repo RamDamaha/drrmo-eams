@@ -9,6 +9,7 @@ use App\Modules\Personnel\Enums\AccountStatus;
 use App\Modules\Personnel\Models\User;
 use App\Modules\Records\Models\AuditLog;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Auth\Passwords\PasswordBroker;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
