@@ -22,7 +22,7 @@ class MyAssignmentController
             ->whereHas('event', fn ($q) => $q->where('status', '!=', 'draft'))
             ->with(['event.location', 'requirement.dutyType'])
             ->get()
-            ->sortBy(fn (Assignment $a) => ($a->requirement?->shift_starts_at ?? $a->event->starts_at)->getTimestamp())
+            ->sortBy(fn (Assignment $a) => ($a->requirement !== null ? $a->requirement->shift_starts_at : $a->event->starts_at)->getTimestamp())
             ->values();
 
         return response()->json(['data' => $rows->map(fn (Assignment $a) => [
@@ -38,8 +38,8 @@ class MyAssignmentController
             'duty_type' => $a->requirement?->dutyType->name,
             'team_needed' => $a->requirement?->team_needed,
             'instructions' => $a->requirement?->instructions,
-            'starts_at' => ($a->requirement?->shift_starts_at ?? $a->event->starts_at)->toIso8601String(),
-            'ends_at' => ($a->requirement?->shift_ends_at ?? $a->event->ends_at)->toIso8601String(),
+            'starts_at' => ($a->requirement !== null ? $a->requirement->shift_starts_at : $a->event->starts_at)->toIso8601String(),
+            'ends_at' => ($a->requirement !== null ? $a->requirement->shift_ends_at : $a->event->ends_at)->toIso8601String(),
         ])]);
     }
 }
