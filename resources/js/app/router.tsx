@@ -1,4 +1,5 @@
 import { createBrowserRouter } from 'react-router';
+import { adminEventRoutes } from '@/features/events/routes';
 import { AdminLayout } from '@/layouts/AdminLayout';
 import { MobileLayout } from '@/layouts/MobileLayout';
 import { CookieNotice } from '@/pages/CookieNotice';
@@ -33,6 +34,7 @@ export const router = createBrowserRouter([
                 children: [
                     { index: true, element: <Placeholder title="Dashboard" /> },
                     { path: 'requests', element: <AccessRequests /> },
+                    ...adminEventRoutes,
                 ],
             },
         ],
