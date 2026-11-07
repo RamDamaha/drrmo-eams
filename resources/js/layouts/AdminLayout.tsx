@@ -157,12 +157,12 @@ const groups: { label: string; items: Item[] }[] = [
     },
 ];
 
-// Shown next to an icon-only rail item (768 to 1023 px), where the label is hidden.
-function RailTip({ children }: { children: ReactNode }) {
+// A small label beside an icon-only control. By default only on the icon rail (768 to 1023 px).
+function Tip({ children, always = false }: { children: ReactNode; always?: boolean }) {
     return (
         <span
             aria-hidden="true"
-            className="pointer-events-none absolute top-1/2 left-full z-40 ml-3 hidden -translate-y-1/2 rounded-control bg-stone-900 px-2.5 py-1.5 text-xs font-medium whitespace-nowrap text-white shadow-raised group-hover:block group-focus-visible:block lg:hidden!"
+            className={`pointer-events-none absolute top-1/2 left-full z-40 ml-3 hidden -translate-y-1/2 rounded-control bg-stone-900 px-2.5 py-1.5 text-xs font-medium whitespace-nowrap text-white shadow-raised group-hover:block group-focus-visible:block ${always ? '' : 'lg:hidden!'}`}
         >
             {children}
         </span>
@@ -172,22 +172,21 @@ function RailTip({ children }: { children: ReactNode }) {
 // rail: the sidebar, which turns into an icon rail below 1024 px. Otherwise the phone menu.
 function AdminNav({ rail = false, onNavigate }: { rail?: boolean; onNavigate?: () => void }) {
     const id = useId();
-    const height = rail ? 'h-10' : 'h-12';
 
     return (
-        <nav aria-label="Admin" className="px-4 py-4">
+        <nav aria-label="Admin" className="px-3 py-4">
             {groups.map((group, index) => (
-                <div key={group.label} className={index > 0 ? 'mt-5' : ''}>
+                <div key={group.label} className={index > 0 ? 'mt-6' : ''}>
                     {rail && index > 0 && (
-                        <hr className="mx-2 mb-4 border-white/10 lg:hidden" aria-hidden="true" />
+                        <hr className="mx-3 mb-4 border-white/10 lg:hidden" aria-hidden="true" />
                     )}
                     <p
                         id={`${id}-${index}`}
-                        className={`px-3 pb-2 text-xs font-semibold tracking-[0.14em] text-white/60 uppercase ${rail ? 'hidden lg:block' : ''}`}
+                        className={`px-3 pb-2 text-[0.6875rem] font-semibold tracking-[0.08em] text-white/50 uppercase ${rail ? 'hidden lg:block' : ''}`}
                     >
                         {group.label}
                     </p>
-                    <ul aria-labelledby={`${id}-${index}`} className="space-y-0.5">
+                    <ul aria-labelledby={`${id}-${index}`} className="space-y-px">
                         {group.items.map((item) => (
                             <li key={item.to}>
                                 <NavLink
@@ -195,7 +194,7 @@ function AdminNav({ rail = false, onNavigate }: { rail?: boolean; onNavigate?: (
                                     end={item.end}
                                     onClick={onNavigate}
                                     className={({ isActive }) =>
-                                        `group relative flex ${height} items-center gap-3 rounded-control px-3 transition-colors ${rail ? 'text-sm max-lg:justify-center max-lg:px-0' : 'text-base'} ${isActive ? 'bg-white/10 font-semibold text-white before:absolute before:inset-y-2 before:-left-4 before:w-1 before:rounded-r-full before:bg-gold-400' : 'font-medium text-white/80 hover:bg-white/5 hover:text-white'}`
+                                        `group relative flex items-center gap-3 rounded-control px-3 transition-colors ${rail ? 'h-9 text-sm max-lg:h-10 max-lg:justify-center max-lg:px-0' : 'h-12 text-base'} ${isActive ? 'bg-white/10 font-semibold text-white before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-r-full before:bg-gold-400' : 'font-medium text-white/75 hover:bg-white/[0.06] hover:text-white'}`
                                     }
                                 >
                                     {({ isActive }) => (
@@ -204,7 +203,7 @@ function AdminNav({ rail = false, onNavigate }: { rail?: boolean; onNavigate?: (
                                                 className={
                                                     isActive
                                                         ? 'text-gold-300'
-                                                        : 'text-white/60 transition-colors group-hover:text-white'
+                                                        : 'text-white/55 transition-colors group-hover:text-white/90'
                                                 }
                                             >
                                                 {item.icon}
@@ -214,7 +213,7 @@ function AdminNav({ rail = false, onNavigate }: { rail?: boolean; onNavigate?: (
                                             >
                                                 {item.label}
                                             </span>
-                                            {rail && <RailTip>{item.label}</RailTip>}
+                                            {rail && <Tip>{item.label}</Tip>}
                                         </>
                                     )}
                                 </NavLink>
@@ -234,43 +233,57 @@ const roleNames = {
     coordinator: 'Coordinator',
 };
 
-// Who is signed in, and the sign out button.
+const signOutIcon = (
+    <NavIcon>
+        <path d="M14 4.5h3.5a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H14" />
+        <path d="M10 16.5 5.5 12 10 7.5M5.5 12H15" />
+    </NavIcon>
+);
+
+// Who is signed in, and the sign out button. In the sidebar they share one row.
 function Account({ rail = false }: { rail?: boolean }) {
     const me = useMe().data;
     const initials = me ? `${me.first_name.charAt(0)}${me.last_name.charAt(0)}`.toUpperCase() : '';
 
-    return (
-        <div className="border-t border-white/10 p-4">
-            {me && (
-                <div
-                    className={`mb-3 flex items-center gap-3 px-1 ${rail ? 'max-lg:justify-center max-lg:px-0' : ''}`}
-                >
-                    <span
-                        aria-hidden="true"
-                        className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-semibold text-gold-200 ring-1 ring-white/20"
-                    >
-                        {initials}
-                    </span>
-                    <div className={`min-w-0 ${rail ? 'max-lg:sr-only' : ''}`}>
-                        <p className="truncate text-sm font-semibold text-white">{me.name}</p>
-                        <p className="truncate text-xs text-white/60">
-                            {me.role ? roleNames[me.role] : 'Signed in'}
-                        </p>
-                    </div>
-                </div>
-            )}
-            <SignOutButton
-                className={`group relative flex w-full items-center gap-3 rounded-control px-3 font-medium text-white/80 transition-colors hover:bg-white/5 hover:text-white ${rail ? 'h-10 text-sm max-lg:justify-center max-lg:px-0' : 'h-12 text-base'}`}
+    const person = me && (
+        <>
+            <span
+                aria-hidden="true"
+                className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-semibold text-gold-200 ring-1 ring-white/15"
             >
-                <span className="text-white/60 transition-colors group-hover:text-white">
-                    <NavIcon>
-                        <path d="M14 4.5h3.5a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H14" />
-                        <path d="M10 16.5 5.5 12 10 7.5M5.5 12H15" />
-                    </NavIcon>
-                </span>
-                <span className={rail ? 'max-lg:sr-only' : ''}>Sign out</span>
-                {rail && <RailTip>Sign out</RailTip>}
-            </SignOutButton>
+                {initials}
+            </span>
+            <div className={`min-w-0 flex-1 ${rail ? 'max-lg:sr-only' : ''}`}>
+                <p className="truncate text-sm font-semibold text-white">{me.name}</p>
+                <p className="truncate text-xs text-white/60">
+                    {me.role ? roleNames[me.role] : 'Signed in'}
+                </p>
+            </div>
+        </>
+    );
+
+    if (!rail) {
+        return (
+            <div className="border-t border-white/10 px-3 py-4">
+                {me && <div className="mb-2 flex items-center gap-3 px-3">{person}</div>}
+                <SignOutButton className="flex h-12 w-full items-center gap-3 rounded-control px-3 text-base font-medium text-white/75 transition-colors hover:bg-white/[0.06] hover:text-white">
+                    <span className="text-white/55">{signOutIcon}</span>
+                    Sign out
+                </SignOutButton>
+            </div>
+        );
+    }
+
+    return (
+        <div className="border-t border-white/10 p-3">
+            <div className="flex items-center gap-3 px-3 py-1 max-lg:flex-col max-lg:px-0">
+                {person}
+                <SignOutButton className="group relative inline-flex size-9 shrink-0 items-center justify-center rounded-control text-white/60 transition-colors hover:bg-white/10 hover:text-white">
+                    {signOutIcon}
+                    <span className="sr-only">Sign out</span>
+                    <Tip always>Sign out</Tip>
+                </SignOutButton>
+            </div>
         </div>
     );
 }
@@ -336,16 +349,14 @@ export function AdminLayout() {
                 <div className="flex flex-col items-center border-b border-white/10 px-4 pt-6 pb-5 lg:items-start lg:px-6">
                     <BrandLogos
                         size="sm"
-                        className="max-lg:flex-col max-lg:gap-2 max-lg:[&>span]:h-px max-lg:[&>span]:w-6"
+                        className="flex-col gap-2 lg:hidden! [&>span]:h-px [&>span]:w-6"
                     />
-                    <div className="mt-5 hidden lg:block">
-                        <p className="flex items-center gap-2 text-xs font-semibold tracking-[0.14em] text-gold-300 uppercase">
-                            <span className="h-px w-5 bg-gold-400" aria-hidden="true" />
-                            Admin
-                        </p>
-                        <p className="mt-1.5 text-base font-bold tracking-tight text-white">
+                    <BrandLogos size="md" className="hidden! lg:flex!" />
+                    <div className="mt-4 hidden lg:block">
+                        <p className="text-base leading-tight font-bold tracking-tight text-white">
                             DRRMO EAMS
                         </p>
+                        <p className="mt-0.5 text-xs text-white/60">Administration</p>
                     </div>
                 </div>
                 <div className="flex-1 lg:overflow-y-auto">
