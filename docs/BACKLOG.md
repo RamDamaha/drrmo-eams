@@ -135,7 +135,7 @@ Tags: module (`core`, `personnel`, `access`, `events`, `notifications`, `monitor
 
 **S3.9 Calendar view** `events` `desktop` **S**
 - Admin sees events by month, week or day from `GET /api/events/calendar`, through a List and Calendar switch on the Events page (no separate sidebar link). Click an event to open it.
-- Done: working plain version. Later: design pass (week and day views, staffing bars, filters).
+- Done: month, week and day views, status tones, staffing bars, filters and a phone layout.
 - Done: published events become completed after they end (`events:complete-ended`).
 
 **S3.8 No-show marking** `events` `both` **S**
