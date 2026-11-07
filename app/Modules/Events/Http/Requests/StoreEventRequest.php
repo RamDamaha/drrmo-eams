@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Events\Http\Requests;
 
+use App\Modules\Events\Enums\EventType;
 use App\Modules\Events\Models\Event;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 
 /** Checks the policy before validating, so a forbidden user gets 403, not a validation error. */
 class StoreEventRequest extends FormRequest
@@ -38,6 +40,7 @@ class StoreEventRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string', 'max:255'],
+            'event_type' => ['required', Rule::enum(EventType::class)],
             'description' => ['nullable', 'string', 'max:5000'],
             'campus_location_id' => ['required', 'integer', 'exists:campus_locations,id'],
             'department_id' => ['nullable', 'integer', 'exists:departments,id'],

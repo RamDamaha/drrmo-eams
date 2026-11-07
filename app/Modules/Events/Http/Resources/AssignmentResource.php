@@ -1,0 +1,24 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Events\Http\Resources;
+
+use App\Modules\Events\Models\Assignment;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+/** @mixin Assignment */
+class AssignmentResource extends JsonResource
+{
+    /** @return array<string, mixed> */
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'person' => ['id' => $this->user->id, 'name' => $this->user->name, 'email' => $this->user->email],
+            'role' => $this->user->role?->code,
+            'task_type' => ['id' => $this->dutyType->id, 'name' => $this->dutyType->name],
+        ];
+    }
+}

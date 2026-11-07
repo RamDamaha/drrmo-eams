@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Events\Models;
 
 use App\Modules\Events\Enums\EventStatus;
+use App\Modules\Events\Enums\EventType;
 use App\Modules\Personnel\Models\Department;
 use App\Modules\Personnel\Models\User;
 use Carbon\Carbon;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property EventStatus $status
@@ -26,12 +28,12 @@ class Event extends Model
     /** @use HasFactory<EventFactory> */
     use HasFactory;
 
-    protected $fillable = ['title', 'description', 'campus_location_id', 'department_id', 'starts_at', 'ends_at', 'status', 'created_by'];
+    protected $fillable = ['title', 'description', 'event_type', 'campus_location_id', 'department_id', 'starts_at', 'ends_at', 'status', 'created_by'];
 
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['starts_at' => 'datetime', 'ends_at' => 'datetime', 'status' => EventStatus::class];
+        return ['starts_at' => 'datetime', 'ends_at' => 'datetime', 'status' => EventStatus::class, 'event_type' => EventType::class];
     }
 
     /** @return BelongsTo<CampusLocation, $this> */
@@ -50,5 +52,11 @@ class Event extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** @return HasMany<Assignment, $this> */
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(Assignment::class);
     }
 }

@@ -191,8 +191,14 @@ export function Events() {
                                             className="transition-colors hover:bg-stone-50"
                                         >
                                             <td className="max-w-md px-5 py-3.5">
-                                                <p className="font-medium text-stone-900">
+                                                <Link
+                                                    to={`/admin/events/${event.id}`}
+                                                    className="font-medium text-stone-900 hover:text-maroon-700 hover:underline"
+                                                >
                                                     {event.title}
+                                                </Link>
+                                                <p className="mt-0.5 text-xs font-semibold tracking-wide text-maroon-700 uppercase">
+                                                    {event.event_type.label}
                                                 </p>
                                                 {event.description && (
                                                     <p className="mt-0.5 truncate text-sm text-stone-500">

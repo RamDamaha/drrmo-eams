@@ -18,4 +18,9 @@ class EventPolicy
     {
         return $user->hasPermission('events.manage');
     }
+
+    public function assign(User $user): bool
+    {
+        return $user->hasPermission('assignments.manage');
+    }
 }

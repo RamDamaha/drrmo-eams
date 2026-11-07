@@ -35,4 +35,11 @@ class EventController
 
         return (new EventResource($event->load('location')))->response()->setStatusCode(201);
     }
+
+    public function show(Event $event): EventResource
+    {
+        Gate::authorize('viewAny', Event::class);
+
+        return new EventResource($event->load(['location', 'assignments' => fn ($q) => $q->with(['user.role', 'dutyType'])->orderBy('id')]));
+    }
 }

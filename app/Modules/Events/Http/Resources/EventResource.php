@@ -18,10 +18,12 @@ class EventResource extends JsonResource
             'id' => $this->id,
             'title' => $this->title,
             'description' => $this->description,
+            'event_type' => ['value' => $this->event_type->value, 'label' => $this->event_type->label()],
             'status' => $this->status->value,
             'starts_at' => $this->starts_at->toIso8601String(),
             'ends_at' => $this->ends_at->toIso8601String(),
             'location' => $this->whenLoaded('location', fn () => ['id' => $this->location->id, 'name' => $this->location->name]),
+            'assignments' => AssignmentResource::collection($this->whenLoaded('assignments')),
         ];
     }
 }

@@ -2,7 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { createEvent, listLocations } from '@/features/events/api';
+import { createEvent, getLookups } from '@/features/events/api';
 import { ApiError } from '@/shared/api/client';
 import { Alert } from '@/shared/ui/Alert';
 import { Button } from '@/shared/ui/Button';
@@ -86,13 +86,14 @@ export function NewEvent() {
     const queryClient = useQueryClient();
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
+    const [eventType, setEventType] = useState('');
     const [locationId, setLocationId] = useState('');
     const [startsAt, setStartsAt] = useState('');
     const [endsAt, setEndsAt] = useState('');
     const [errors, setErrors] = useState<Errors>({});
     const [failure, setFailure] = useState<string | null>(null);
 
-    const locations = useQuery({ queryKey: ['event-locations'], queryFn: listLocations });
+    const locations = useQuery({ queryKey: ['event-locations'], queryFn: getLookups });
 
     const save = useMutation({
         mutationFn: createEvent,
@@ -116,6 +117,7 @@ export function NewEvent() {
         setFailure(null);
         save.mutate({
             title: title.trim(),
+            event_type: eventType,
             description: description.trim(),
             campus_location_id: Number(locationId),
             // The date fields give local time. Convert so the server gets an exact moment.
@@ -127,6 +129,7 @@ export function NewEvent() {
     const first = (key: string) => errors[key]?.[0] ?? null;
     const hasErrors = Object.keys(errors).length > 0;
     const descriptionError = first('description');
+    const typeError = first('event_type');
     const locationError = first('campus_location_id');
     const locationPlaceholder = locations.isPending
         ? 'Loading locations...'
@@ -169,6 +172,40 @@ export function NewEvent() {
                         maxLength={255}
                         required
                     />
+
+                    <div>
+                        <label
+                            htmlFor="event-type"
+                            className="mb-1.5 block text-sm font-medium text-stone-800"
+                        >
+                            Event type
+                        </label>
+                        <div className="relative">
+                            <select
+                                id="event-type"
+                                value={eventType}
+                                onChange={(e) => setEventType(e.target.value)}
+                                disabled={!locations.isSuccess}
+                                aria-invalid={typeError ? true : undefined}
+                                aria-describedby={typeError ? 'event-type-error' : undefined}
+                                className={`${controlClass(Boolean(typeError))} min-h-12 cursor-pointer appearance-none pr-11 ${eventType ? '' : 'text-stone-500'}`}
+                                required
+                            >
+                                <option value="">Choose a type</option>
+                                {locations.data?.event_types.map((type) => (
+                                    <option
+                                        key={type.value}
+                                        value={type.value}
+                                        className="text-stone-900"
+                                    >
+                                        {type.label}
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronIcon className="pointer-events-none absolute top-1/2 right-3.5 size-5 -translate-y-1/2 text-stone-500" />
+                        </div>
+                        {typeError && <FieldError id="event-type-error">{typeError}</FieldError>}
+                    </div>
 
                     <div>
                         <div className="mb-1.5 flex items-baseline justify-between gap-4">
@@ -227,7 +264,7 @@ export function NewEvent() {
                                 required
                             >
                                 <option value="">{locationPlaceholder}</option>
-                                {locations.data?.map((location) => (
+                                {locations.data?.locations.map((location) => (
                                     <option
                                         key={location.id}
                                         value={location.id}
