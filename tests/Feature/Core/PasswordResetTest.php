@@ -13,9 +13,11 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Tests\Support\FakeMailSender;
+use Tests\TestCase;
 
 // Requests must look like they come from the app (VerifyApiRequestOrigin).
 beforeEach(function () {
+    /** @var TestCase $this */
     $this->seed(PermissionSeeder::class);
     $this->withHeaders(['Referer' => 'http://localhost', 'X-Requested-With' => 'XMLHttpRequest']);
     $this->mail = new FakeMailSender;
