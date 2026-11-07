@@ -1,6 +1,7 @@
 // A-Calendar. Month, week and day views of every event, with how many places are filled.
 // View, day and filters live in the address bar, so a link opens the same page.
-// Desktop first. Under 768 px the month becomes a compact grid with the chosen day listed below it.
+// Desktop first. Under 768 px the month becomes a compact grid with the chosen day listed below it,
+// and the week becomes a list of days.
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router';
@@ -11,6 +12,7 @@ import {
     dayKey,
     isLive,
     matchesFilters,
+    needsPeople,
     parseDayKey,
     rangeLabel,
     sameDay,
@@ -38,11 +40,6 @@ import { Button } from '@/shared/ui/Button';
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_CELL_LIMIT = 3;
 
-const shortDay = new Intl.DateTimeFormat(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-});
 const longDay = new Intl.DateTimeFormat(undefined, {
     weekday: 'long',
     month: 'long',
@@ -51,14 +48,20 @@ const longDay = new Intl.DateTimeFormat(undefined, {
 
 const isActive = (event: CalendarEvent) => event.status === 'draft' || event.status === 'published';
 
-// Published is a filled maroon tint, draft a dashed outline, completed gray and cancelled struck out,
-// so the four still read apart in grayscale.
-const eventTone: Record<CalendarEvent['status'], string> = {
-    published:
-        'border-maroon-100 bg-maroon-50 text-maroon-900 hover:border-maroon-200 hover:bg-maroon-100',
-    draft: 'border-dashed border-stone-400 bg-white text-stone-700 hover:bg-stone-50',
-    completed: 'border-stone-200 bg-stone-100 text-stone-600 hover:bg-stone-200/70',
+// Every event block has a 3 px accent on its left. Published is a maroon tint, draft a dashed
+// outline, completed gray and cancelled struck out, so the four still read apart in grayscale.
+const blockTone: Record<CalendarEvent['status'], string> = {
+    published: 'border-transparent bg-maroon-50 text-maroon-950 hover:bg-maroon-100',
+    draft: 'border-dashed border-stone-300 bg-white text-stone-800 hover:bg-stone-50',
+    completed: 'border-transparent bg-stone-100 text-stone-600 hover:bg-stone-200/70',
     cancelled: 'border-transparent bg-transparent text-stone-500 hover:bg-stone-100',
+};
+
+const accentTone: Record<CalendarEvent['status'], string> = {
+    published: 'bg-maroon-700',
+    draft: 'bg-stone-400',
+    completed: 'bg-stone-400',
+    cancelled: 'bg-stone-300',
 };
 
 const dotTone: Record<CalendarEvent['status'], string> = {
@@ -73,6 +76,13 @@ const fillTone = {
     short: 'bg-amber-500',
     closed: 'bg-stone-400',
     unset: '',
+};
+
+const countTone = {
+    full: 'text-green-700',
+    short: 'text-amber-800',
+    closed: 'text-stone-500',
+    unset: 'text-stone-500',
 };
 
 function describe(event: CalendarEvent, day: Date): string {
@@ -92,18 +102,21 @@ function eventLink(event: CalendarEvent) {
     return `/admin/events/${event.id}`;
 }
 
-// A thin bar along the bottom of a chip. Only active events with duties get one.
-function ChipBar({ event }: { event: CalendarEvent }) {
-    const staff = staffing(event);
-    if (!isActive(event) || staff.tone === 'unset') return null;
+function plural(count: number, word: string) {
+    return `${count} ${count === 1 ? word : `${word}s`}`;
+}
+
+function Accent({ event }: { event: CalendarEvent }) {
     return (
-        <span className="absolute inset-x-0 bottom-0 h-[3px] bg-stone-900/10" aria-hidden="true">
-            <span
-                className={`block h-full ${fillTone[staff.tone]}`}
-                style={{ width: `${staff.ratio * 100}%` }}
-            />
-        </span>
+        <span
+            className={`w-[3px] shrink-0 self-stretch rounded-full ${accentTone[event.status]}`}
+            aria-hidden="true"
+        />
     );
+}
+
+function LiveDot() {
+    return <span className="size-1.5 shrink-0 rounded-full bg-ember-500" aria-hidden="true" />;
 }
 
 // Bar plus words, for week cards and day rows.
@@ -126,7 +139,7 @@ function StaffMeter({ event, compact = false }: { event: CalendarEvent; compact?
             </p>
             {staff.tone !== 'unset' && (
                 <div
-                    className={`mt-1 overflow-hidden rounded-full bg-stone-200 ${compact ? 'h-1' : 'h-1.5'}`}
+                    className={`mt-1 overflow-hidden rounded-full bg-stone-900/10 ${compact ? 'h-1' : 'h-1.5'}`}
                     aria-hidden="true"
                 >
                     <div
@@ -139,32 +152,69 @@ function StaffMeter({ event, compact = false }: { event: CalendarEvent; compact?
     );
 }
 
-function LiveDot() {
-    return <span className="size-1.5 shrink-0 rounded-full bg-ember-500" aria-hidden="true" />;
-}
-
-// One event in a month cell: title, places filled, and a staffing bar.
+// One event in a month cell: the title, then the start time and places filled.
 function MonthChip({ event, day }: { event: CalendarEvent; day: Date }) {
     const staff = staffing(event);
+    const time = splitTime(timeOnDay(event, day, true))[0];
     const text = describe(event, day);
     return (
         <Link
             to={eventLink(event)}
             aria-label={text}
             title={text}
-            className={`relative flex items-center gap-1.5 overflow-hidden rounded-[6px] border px-1.5 pt-0.5 pb-1 text-xs transition-colors ${eventTone[event.status]}`}
+            className={`flex gap-1.5 rounded-[5px] border py-1 pr-1.5 pl-1 text-xs leading-4 transition-colors ${blockTone[event.status]}`}
         >
-            {isLive(event) && <LiveDot />}
-            <span
-                className={`min-w-0 flex-1 truncate font-medium ${event.status === 'cancelled' ? 'line-through' : ''}`}
-            >
-                {event.title}
+            <Accent event={event} />
+            <span className="min-w-0 flex-1">
+                <span
+                    className={`block truncate font-semibold ${event.status === 'cancelled' ? 'line-through' : ''}`}
+                >
+                    {event.title}
+                </span>
+                <span className="mt-px flex items-center gap-1.5">
+                    {isLive(event) && <LiveDot />}
+                    <span className="min-w-0 flex-1 truncate tabular-nums opacity-75">{time}</span>
+                    {isActive(event) && staff.short && (
+                        <span
+                            className={`shrink-0 font-semibold tabular-nums ${countTone[staff.tone]}`}
+                        >
+                            {staff.short}
+                        </span>
+                    )}
+                </span>
             </span>
-            {isActive(event) && staff.short && (
-                <span className="shrink-0 tabular-nums opacity-80">{staff.short}</span>
-            )}
-            <ChipBar event={event} />
         </Link>
+    );
+}
+
+function DayNumber({
+    day,
+    muted,
+    onOpen,
+    count,
+}: {
+    day: Date;
+    muted: boolean;
+    onOpen: () => void;
+    count: number;
+}) {
+    const isToday = sameDay(day, new Date());
+    return (
+        <button
+            type="button"
+            onClick={onOpen}
+            aria-label={`Open ${longDay.format(day)}${count ? `, ${plural(count, 'event')}` : ''}`}
+            aria-current={isToday ? 'date' : undefined}
+            className={`flex size-7 items-center justify-center rounded-full text-sm transition-colors ${
+                isToday
+                    ? 'bg-maroon-700 font-semibold text-white hover:bg-maroon-800'
+                    : muted
+                      ? 'text-stone-500 hover:bg-stone-100'
+                      : 'font-medium text-stone-800 hover:bg-stone-100'
+            }`}
+        >
+            {day.getDate()}
+        </button>
     );
 }
 
@@ -181,10 +231,9 @@ function MonthGrid({
     loading: boolean;
     onOpenDay: (day: Date) => void;
 }) {
-    const today = startOfDay(new Date());
     return (
-        <div className="overflow-hidden rounded-card bg-white ring-1 ring-stone-200">
-            <div className="grid grid-cols-7 border-b border-stone-200">
+        <>
+            <div className="grid grid-cols-7 border-b border-stone-200" aria-hidden="true">
                 {WEEKDAYS.map((name) => (
                     <div
                         key={name}
@@ -197,39 +246,29 @@ function MonthGrid({
             <div className="grid grid-cols-7 gap-px bg-stone-200">
                 {days.map((day, index) => {
                     const inMonth = day.getMonth() === anchor.getMonth();
-                    const isToday = sameDay(day, today);
                     const onDay = events.filter((event) => touchesDay(event, day));
                     const shown = onDay.slice(0, MONTH_CELL_LIMIT);
                     const hidden = onDay.length - shown.length;
                     return (
                         <div
                             key={day.toISOString()}
-                            className={`min-h-32 p-1.5 ${inMonth ? 'bg-white' : 'bg-stone-50'}`}
+                            className={`min-h-36 p-1.5 ${inMonth ? 'bg-white' : 'bg-stone-50'}`}
                         >
-                            <button
-                                type="button"
-                                onClick={() => onOpenDay(day)}
-                                aria-label={`Open ${longDay.format(day)}${onDay.length ? `, ${onDay.length} ${onDay.length === 1 ? 'event' : 'events'}` : ''}`}
-                                aria-current={isToday ? 'date' : undefined}
-                                className={`mb-1 flex size-7 items-center justify-center rounded-full text-sm tabular-nums transition-colors ${
-                                    isToday
-                                        ? 'bg-maroon-700 font-semibold text-white hover:bg-maroon-800'
-                                        : inMonth
-                                          ? 'font-medium text-stone-800 hover:bg-stone-100'
-                                          : 'text-stone-500 hover:bg-stone-100'
-                                }`}
-                            >
-                                {day.getDate()}
-                            </button>
+                            <DayNumber
+                                day={day}
+                                muted={!inMonth}
+                                count={onDay.length}
+                                onOpen={() => onOpenDay(day)}
+                            />
                             {loading ? (
                                 index % 3 === 1 && (
                                     <div
-                                        className="h-5 animate-pulse rounded-[6px] bg-stone-200"
+                                        className="mt-1 h-5 animate-pulse rounded-[5px] bg-stone-200"
                                         aria-hidden="true"
                                     />
                                 )
                             ) : (
-                                <ul className="space-y-1">
+                                <ul className="mt-1 space-y-[3px]">
                                     {shown.map((event) => (
                                         <li key={event.id}>
                                             <MonthChip event={event} day={day} />
@@ -240,7 +279,7 @@ function MonthGrid({
                                             <button
                                                 type="button"
                                                 onClick={() => onOpenDay(day)}
-                                                className="rounded px-1.5 text-xs font-semibold text-stone-600 transition-colors hover:text-maroon-700"
+                                                className="rounded px-1.5 py-0.5 text-xs font-semibold text-stone-600 transition-colors hover:bg-stone-100 hover:text-maroon-700"
                                             >
                                                 {hidden} more
                                             </button>
@@ -252,7 +291,7 @@ function MonthGrid({
                     );
                 })}
             </div>
-        </div>
+        </>
     );
 }
 
@@ -270,7 +309,7 @@ function MonthDots({
 }) {
     const today = startOfDay(new Date());
     return (
-        <div className="rounded-card bg-white p-2 ring-1 ring-stone-200">
+        <div className="p-2">
             <div className="grid grid-cols-7" aria-hidden="true">
                 {WEEKDAYS.map((name) => (
                     <div
@@ -294,11 +333,11 @@ function MonthDots({
                             onClick={() => onPick(day)}
                             aria-pressed={picked}
                             aria-current={isToday ? 'date' : undefined}
-                            aria-label={`${longDay.format(day)}, ${onDay.length === 0 ? 'no events' : `${onDay.length} ${onDay.length === 1 ? 'event' : 'events'}`}`}
+                            aria-label={`${longDay.format(day)}, ${onDay.length === 0 ? 'no events' : plural(onDay.length, 'event')}`}
                             className="flex min-h-12 flex-col items-center justify-center gap-1 rounded-control"
                         >
                             <span
-                                className={`flex size-8 items-center justify-center rounded-full text-sm tabular-nums transition-colors ${
+                                className={`flex size-8 items-center justify-center rounded-full text-sm transition-colors ${
                                     picked
                                         ? 'bg-maroon-700 font-semibold text-white'
                                         : isToday
@@ -326,7 +365,7 @@ function MonthDots({
     );
 }
 
-// A card in a week column.
+// A block in a week column.
 function WeekCard({ event, day }: { event: CalendarEvent; day: Date }) {
     const text = describe(event, day);
     return (
@@ -334,32 +373,35 @@ function WeekCard({ event, day }: { event: CalendarEvent; day: Date }) {
             to={eventLink(event)}
             aria-label={text}
             title={text}
-            className={`block rounded-control border p-2 transition-colors ${eventTone[event.status]}`}
+            className={`flex gap-2 rounded-[6px] border py-1.5 pr-2 pl-1.5 transition-colors ${blockTone[event.status]}`}
         >
-            <p className="flex flex-wrap items-center gap-x-1.5 text-xs tabular-nums opacity-90">
-                {isLive(event) && <LiveDot />}
-                {splitTime(timeOnDay(event, day)).map((part, i) => (
-                    <span
-                        key={part}
-                        className={`whitespace-nowrap ${i === 0 ? 'font-semibold' : ''}`}
-                    >
-                        {part}
+            <Accent event={event} />
+            <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-1.5 text-xs tabular-nums opacity-75">
+                    {isLive(event) && <LiveDot />}
+                    {timeOnDay(event, day, true)}
+                </span>
+                <span
+                    className={`mt-0.5 line-clamp-2 text-sm leading-5 font-semibold ${event.status === 'cancelled' ? 'line-through' : ''}`}
+                >
+                    {event.title}
+                </span>
+                {event.location && (
+                    <span className="mt-0.5 block truncate text-xs opacity-75">
+                        {event.location}
                     </span>
-                ))}
-            </p>
-            <p
-                className={`mt-0.5 line-clamp-2 text-sm font-semibold ${event.status === 'cancelled' ? 'line-through' : ''}`}
-            >
-                {event.title}
-            </p>
-            {event.status !== 'published' && (
-                <p className="mt-0.5 text-xs">{statuses[event.status].label}</p>
-            )}
-            {isActive(event) && (
-                <div className="mt-2">
-                    <StaffMeter event={event} compact />
-                </div>
-            )}
+                )}
+                {event.status !== 'published' && (
+                    <span className="mt-0.5 block text-xs font-medium">
+                        {statuses[event.status].label}
+                    </span>
+                )}
+                {isActive(event) && (
+                    <span className="mt-2 block">
+                        <StaffMeter event={event} compact />
+                    </span>
+                )}
+            </span>
         </Link>
     );
 }
@@ -375,45 +417,44 @@ function WeekColumns({
     loading: boolean;
     onOpenDay: (day: Date) => void;
 }) {
-    const today = startOfDay(new Date());
     return (
-        <div className="grid grid-cols-7 gap-px overflow-hidden rounded-card bg-stone-200 ring-1 ring-stone-200">
+        <div className="grid grid-cols-7 gap-px bg-stone-200">
             {days.map((day, index) => {
-                const isToday = sameDay(day, today);
+                const isToday = sameDay(day, new Date());
                 const onDay = events.filter((event) => touchesDay(event, day));
                 return (
-                    <div key={day.toISOString()} className="flex min-h-96 flex-col bg-white">
+                    <div key={day.toISOString()} className="flex min-h-[26rem] flex-col bg-white">
                         <button
                             type="button"
                             onClick={() => onOpenDay(day)}
-                            aria-label={`Open ${longDay.format(day)}`}
+                            aria-label={`Open ${longDay.format(day)}${onDay.length ? `, ${plural(onDay.length, 'event')}` : ''}`}
                             aria-current={isToday ? 'date' : undefined}
-                            className="flex items-center gap-2 border-b border-stone-200 px-3 py-2 text-left transition-colors hover:bg-stone-50"
+                            className="flex flex-col items-center gap-0.5 border-b border-stone-200 bg-white py-2 transition-colors hover:bg-stone-50"
                         >
-                            <span className="text-xs font-semibold tracking-wide text-stone-500 uppercase">
+                            <span
+                                className={`text-xs font-semibold tracking-wide uppercase ${isToday ? 'text-maroon-700' : 'text-stone-500'}`}
+                            >
                                 {WEEKDAYS[day.getDay()]}
                             </span>
                             <span
-                                className={`flex size-7 items-center justify-center rounded-full text-sm font-semibold tabular-nums ${isToday ? 'bg-maroon-700 text-white' : 'text-stone-900'}`}
+                                className={`flex size-8 items-center justify-center rounded-full text-lg font-semibold ${isToday ? 'bg-maroon-700 text-white' : 'text-stone-900'}`}
                             >
                                 {day.getDate()}
                             </span>
                         </button>
-                        <div className="flex-1 space-y-1.5 p-1.5">
-                            {loading ? (
-                                index % 2 === 0 && (
-                                    <div
-                                        className="h-20 animate-pulse rounded-control bg-stone-200"
-                                        aria-hidden="true"
-                                    />
-                                )
-                            ) : onDay.length === 0 ? (
-                                <p className="px-1.5 py-1 text-xs text-stone-500">No events</p>
-                            ) : (
-                                onDay.map((event) => (
-                                    <WeekCard key={event.id} event={event} day={day} />
-                                ))
-                            )}
+                        <div
+                            className={`flex-1 space-y-1.5 p-1.5 ${isToday ? 'bg-maroon-50/50' : ''}`}
+                        >
+                            {loading
+                                ? index % 2 === 0 && (
+                                      <div
+                                          className="h-20 animate-pulse rounded-[6px] bg-stone-200"
+                                          aria-hidden="true"
+                                      />
+                                  )
+                                : onDay.map((event) => (
+                                      <WeekCard key={event.id} event={event} day={day} />
+                                  ))}
                         </div>
                     </div>
                 );
@@ -429,7 +470,11 @@ function AgendaRow({ event, day }: { event: CalendarEvent; day: Date }) {
     const status = statuses[event.status];
     const [from, to = ''] = splitTime(timeOnDay(event, day));
     return (
-        <li className="flex flex-col gap-3 px-5 py-4 transition-colors hover:bg-stone-50 lg:flex-row lg:items-center lg:gap-6">
+        <li className="relative flex flex-col gap-3 py-4 pr-4 pl-5 transition-colors hover:bg-stone-50 sm:pr-5 lg:flex-row lg:items-center lg:gap-6">
+            <span
+                className={`absolute inset-y-4 left-0 w-[3px] rounded-r-full ${accentTone[event.status]}`}
+                aria-hidden="true"
+            />
             <div className="flex shrink-0 gap-1.5 text-sm tabular-nums lg:w-24 lg:flex-col lg:gap-0">
                 <p className={`font-semibold ${active ? 'text-stone-900' : 'text-stone-600'}`}>
                     {from}
@@ -456,8 +501,8 @@ function AgendaRow({ event, day }: { event: CalendarEvent; day: Date }) {
                         <span className={`${chipClass} ${status.chip}`}>{status.label}</span>
                     )}
                 </div>
-                <p className="mt-0.5 flex items-center gap-1.5 text-sm text-stone-600">
-                    <span>{event.event_type.label}</span>
+                <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-sm text-stone-600">
+                    <span className="shrink-0">{event.event_type.label}</span>
                     <span aria-hidden="true" className="text-stone-400">
                         ·
                     </span>
@@ -492,94 +537,156 @@ function AgendaRow({ event, day }: { event: CalendarEvent; day: Date }) {
     );
 }
 
-function Agenda({
+function AgendaSkeleton() {
+    return (
+        <div className="space-y-5 px-5 py-5" aria-hidden="true">
+            {[0, 1].map((row) => (
+                <div key={row} className="flex gap-6">
+                    <div className="h-4 w-16 animate-pulse rounded bg-stone-200" />
+                    <div className="flex-1 space-y-2">
+                        <div className="h-4 w-48 animate-pulse rounded bg-stone-200" />
+                        <div className="h-3 w-32 animate-pulse rounded bg-stone-200" />
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+// The events of one day as rows, or a quiet empty line.
+function DayList({
     day,
     events,
     loading,
-    heading,
 }: {
     day: Date;
     events: CalendarEvent[];
     loading: boolean;
-    heading?: string;
 }) {
+    if (loading) return <AgendaSkeleton />;
     const onDay = events.filter((event) => touchesDay(event, day));
+    if (onDay.length === 0) {
+        return (
+            <div className="flex flex-col items-center px-6 py-14 text-center">
+                <span className="flex size-11 items-center justify-center rounded-control border border-stone-200 text-stone-500">
+                    <CalendarIcon className="size-5" />
+                </span>
+                <p className="mt-3 text-sm font-medium text-stone-800">No events on this day</p>
+                <p className="mt-0.5 text-sm text-stone-600">
+                    Pick another day, or add a new event.
+                </p>
+            </div>
+        );
+    }
     return (
-        <section className="overflow-hidden rounded-card bg-white ring-1 ring-stone-200">
-            {heading && (
-                <h3 className="border-b border-stone-200 px-5 py-3 text-sm font-semibold text-stone-900">
-                    {heading}
-                </h3>
-            )}
-            {loading ? (
-                <div className="space-y-4 p-5" aria-hidden="true">
-                    {[0, 1].map((row) => (
-                        <div key={row} className="flex gap-6">
-                            <div className="h-4 w-16 animate-pulse rounded bg-stone-200" />
-                            <div className="flex-1 space-y-2">
-                                <div className="h-4 w-48 animate-pulse rounded bg-stone-200" />
-                                <div className="h-3 w-32 animate-pulse rounded bg-stone-200" />
-                            </div>
+        <ul className="divide-y divide-stone-100">
+            {onDay.map((event) => (
+                <AgendaRow key={event.id} event={event} day={day} />
+            ))}
+        </ul>
+    );
+}
+
+// Phones: the week as a list. Empty days collapse to one line.
+function WeekList({
+    days,
+    events,
+    loading,
+}: {
+    days: Date[];
+    events: CalendarEvent[];
+    loading: boolean;
+}) {
+    if (loading) return <AgendaSkeleton />;
+    return (
+        <div className="divide-y divide-stone-200">
+            {days.map((day) => {
+                const isToday = sameDay(day, new Date());
+                const onDay = events.filter((event) => touchesDay(event, day));
+                return (
+                    <section key={day.toISOString()} aria-label={longDay.format(day)}>
+                        <div
+                            className={`flex items-center justify-between gap-3 px-4 py-2.5 ${onDay.length ? 'bg-stone-50' : ''}`}
+                        >
+                            <p className="flex items-center gap-2 text-sm font-semibold text-stone-900">
+                                <span
+                                    className={`flex size-7 items-center justify-center rounded-full ${isToday ? 'bg-maroon-700 text-white' : ''}`}
+                                >
+                                    {day.getDate()}
+                                </span>
+                                {WEEKDAYS[day.getDay()]}
+                                {isToday && (
+                                    <span className="text-xs font-semibold text-maroon-700">
+                                        Today
+                                    </span>
+                                )}
+                            </p>
+                            {onDay.length === 0 && (
+                                <p className="text-sm text-stone-500">No events</p>
+                            )}
                         </div>
-                    ))}
-                </div>
-            ) : onDay.length === 0 ? (
-                <div className="flex items-center gap-3 px-5 py-6 text-sm text-stone-600">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-control border border-stone-200 text-stone-500">
-                        <CalendarIcon className="size-5" />
-                    </span>
-                    No events on this day.
-                </div>
-            ) : (
-                <ul className="divide-y divide-stone-100">
-                    {onDay.map((event) => (
-                        <AgendaRow key={event.id} event={event} day={day} />
-                    ))}
-                </ul>
-            )}
-        </section>
+                        {onDay.length > 0 && (
+                            <ul className="divide-y divide-stone-100 border-t border-stone-100">
+                                {onDay.map((event) => (
+                                    <AgendaRow key={event.id} event={event} day={day} />
+                                ))}
+                            </ul>
+                        )}
+                    </section>
+                );
+            })}
+        </div>
+    );
+}
+
+function LegendItem({ children, label }: { children: ReactNode; label: string }) {
+    return (
+        <span className="flex items-center gap-1.5">
+            {children}
+            {label}
+        </span>
     );
 }
 
 function Legend() {
-    const swatch = 'inline-block h-3 w-5 rounded-[3px] border';
+    const block = 'flex h-3.5 w-6 items-stretch rounded-[3px] border p-px';
+    const accent = 'w-[3px] rounded-full';
     const bar = 'inline-block h-1 w-5 rounded-full';
     return (
-        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-stone-600">
-            <span className="flex items-center gap-1.5">
-                <span className={`${swatch} border-maroon-100 bg-maroon-50`} aria-hidden="true" />
-                Published
-            </span>
-            <span className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-stone-200 bg-stone-50/60 px-4 py-3 text-xs text-stone-600">
+            <LegendItem label="Published">
+                <span className={`${block} border-transparent bg-maroon-50`} aria-hidden="true">
+                    <span className={`${accent} bg-maroon-700`} />
+                </span>
+            </LegendItem>
+            <LegendItem label="Draft">
                 <span
-                    className={`${swatch} border-dashed border-stone-400 bg-white`}
+                    className={`${block} border-dashed border-stone-400 bg-white`}
                     aria-hidden="true"
-                />
-                Draft
-            </span>
-            <span className="flex items-center gap-1.5">
-                <span className={`${swatch} border-stone-200 bg-stone-100`} aria-hidden="true" />
-                Completed
-            </span>
-            <span className="flex items-center gap-1.5">
-                <span className="text-stone-500 line-through" aria-hidden="true">
+                >
+                    <span className={`${accent} bg-stone-400`} />
+                </span>
+            </LegendItem>
+            <LegendItem label="Completed">
+                <span className={`${block} border-transparent bg-stone-200`} aria-hidden="true">
+                    <span className={`${accent} bg-stone-400`} />
+                </span>
+            </LegendItem>
+            <LegendItem label="Cancelled">
+                <span className="font-medium text-stone-500 line-through" aria-hidden="true">
                     Abc
                 </span>
-                Cancelled
-            </span>
+            </LegendItem>
             <span className="hidden h-3 w-px bg-stone-300 sm:block" aria-hidden="true" />
-            <span className="flex items-center gap-1.5">
+            <LegendItem label="Fully staffed">
                 <span className={`${bar} bg-green-600`} aria-hidden="true" />
-                Fully staffed
-            </span>
-            <span className="flex items-center gap-1.5">
+            </LegendItem>
+            <LegendItem label="Needs people">
                 <span className={`${bar} bg-amber-500`} aria-hidden="true" />
-                Needs people
-            </span>
-            <span className="flex items-center gap-1.5">
+            </LegendItem>
+            <LegendItem label="Happening now">
                 <LiveDot />
-                Happening now
-            </span>
+            </LegendItem>
         </div>
     );
 }
@@ -615,6 +722,9 @@ function FilterSelect({
     );
 }
 
+const navButton =
+    'flex size-10 items-center justify-center text-stone-700 transition-colors hover:bg-stone-50 hover:text-stone-900 active:bg-stone-100';
+
 export function Calendar() {
     const [params, setParams] = useSearchParams();
     const view: CalendarView =
@@ -641,7 +751,6 @@ export function Calendar() {
         );
 
     const days = visibleDays(view, anchor);
-    // On phones the month grid is compact and the week is a list, so both fetch the same range.
     const from = days[0];
     const to = addDays(days[days.length - 1], 1);
 
@@ -654,11 +763,13 @@ export function Calendar() {
 
     const events = (calendar.data ?? []).filter((event) => matchesFilters(event, filters));
     const inRange = events.filter((event) => days.some((day) => touchesDay(event, day)));
+    const short = inRange.filter(needsPeople).length;
     const loading = calendar.isPending;
 
     const openDay = (day: Date) => update({ view: 'day', date: dayKey(day) });
-    const unit = view === 'month' ? 'month' : view === 'week' ? 'week' : 'day';
+    const unit = view;
     const label = rangeLabel(view, anchor);
+    const showsToday = days.some((day) => sameDay(day, new Date()));
 
     return (
         <div className="mx-auto max-w-[1440px]">
@@ -681,59 +792,7 @@ export function Calendar() {
                 </Link>
             </header>
 
-            <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                    <Button size="md" variant="secondary" onClick={() => update({ date: null })}>
-                        Today
-                    </Button>
-                    <div className="flex">
-                        <button
-                            type="button"
-                            onClick={() => update({ date: dayKey(shiftAnchor(view, anchor, -1)) })}
-                            aria-label={`Previous ${unit}`}
-                            className="flex size-10 items-center justify-center rounded-control text-stone-700 transition-colors hover:bg-stone-100 hover:text-stone-900"
-                        >
-                            <ChevronIcon className="size-5 rotate-90" />
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => update({ date: dayKey(shiftAnchor(view, anchor, 1)) })}
-                            aria-label={`Next ${unit}`}
-                            className="flex size-10 items-center justify-center rounded-control text-stone-700 transition-colors hover:bg-stone-100 hover:text-stone-900"
-                        >
-                            <ChevronIcon className="size-5 -rotate-90" />
-                        </button>
-                    </div>
-                    <h2
-                        className="text-lg font-semibold text-stone-900 tabular-nums"
-                        aria-live="polite"
-                    >
-                        {label}
-                    </h2>
-                </div>
-                <div
-                    className="inline-flex rounded-control bg-stone-100 p-1"
-                    role="group"
-                    aria-label="Calendar view"
-                >
-                    {calendarViews.map((v) => {
-                        const selected = v.id === view;
-                        return (
-                            <button
-                                key={v.id}
-                                type="button"
-                                aria-pressed={selected}
-                                onClick={() => update({ view: v.id === 'month' ? null : v.id })}
-                                className={`inline-flex min-h-9 items-center rounded-[6px] px-3.5 text-sm font-semibold transition-colors ${selected ? 'bg-white text-stone-900 ring-1 ring-stone-200' : 'text-stone-600 hover:text-stone-900'}`}
-                            >
-                                {v.label}
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-stone-200 pt-4">
+            <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3">
                 <FilterSelect
                     label="Status"
                     value={filters.status}
@@ -777,13 +836,29 @@ export function Calendar() {
                     </button>
                 )}
                 <p className="text-sm text-stone-600 tabular-nums sm:ml-auto" aria-live="polite">
-                    {loading
-                        ? 'Loading events...'
-                        : inRange.length === 0
-                          ? filtering
-                              ? `No events match these filters this ${unit}.`
-                              : `No events this ${unit}.`
-                          : `${inRange.length} ${inRange.length === 1 ? 'event' : 'events'} this ${unit}`}
+                    {loading ? (
+                        'Loading events...'
+                    ) : inRange.length === 0 ? (
+                        filtering ? (
+                            `No events match these filters this ${unit}.`
+                        ) : (
+                            `No events this ${unit}.`
+                        )
+                    ) : (
+                        <>
+                            {plural(inRange.length, 'event')} this {unit}
+                            {short > 0 && (
+                                <>
+                                    <span aria-hidden="true" className="px-1.5 text-stone-400">
+                                        ·
+                                    </span>
+                                    <span className="font-medium text-amber-800">
+                                        {short} {short === 1 ? 'needs' : 'need'} people
+                                    </span>
+                                </>
+                            )}
+                        </>
+                    )}
                 </p>
             </div>
 
@@ -805,61 +880,120 @@ export function Calendar() {
                 </div>
             )}
 
-            <div className="mt-4" aria-busy={loading || undefined}>
-                {view === 'month' && (
-                    <>
-                        <div className="hidden md:block">
-                            <MonthGrid
-                                days={days}
-                                anchor={anchor}
-                                events={events}
-                                loading={loading}
-                                onOpenDay={openDay}
-                            />
-                        </div>
-                        <div className="space-y-4 md:hidden">
-                            <MonthDots
-                                days={days}
-                                anchor={anchor}
-                                events={events}
-                                onPick={(day) => update({ date: dayKey(day) })}
-                            />
-                            <Agenda
-                                day={anchor}
-                                events={events}
-                                loading={loading}
-                                heading={longDay.format(anchor)}
-                            />
-                        </div>
-                    </>
-                )}
-                {view === 'week' && (
-                    <>
-                        <div className="hidden md:block">
-                            <WeekColumns
-                                days={days}
-                                events={events}
-                                loading={loading}
-                                onOpenDay={openDay}
-                            />
-                        </div>
-                        <div className="space-y-3 md:hidden">
-                            {days.map((day) => (
-                                <Agenda
-                                    key={day.toISOString()}
-                                    day={day}
+            <section
+                className="mt-4 overflow-hidden rounded-card bg-white ring-1 ring-stone-200"
+                aria-busy={loading || undefined}
+                aria-labelledby="calendar-range"
+            >
+                <div className="flex flex-wrap items-center gap-3 border-b border-stone-200 px-4 py-3">
+                    <div className="flex overflow-hidden rounded-control border border-stone-300 bg-white">
+                        <button
+                            type="button"
+                            onClick={() => update({ date: dayKey(shiftAnchor(view, anchor, -1)) })}
+                            aria-label={`Previous ${unit}`}
+                            className={navButton}
+                        >
+                            <ChevronIcon className="size-5 rotate-90" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => update({ date: null })}
+                            disabled={showsToday && !params.get('date')}
+                            className="border-x border-stone-300 px-3.5 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-50 active:bg-stone-100 disabled:cursor-default disabled:text-stone-500 disabled:hover:bg-white"
+                        >
+                            Today
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => update({ date: dayKey(shiftAnchor(view, anchor, 1)) })}
+                            aria-label={`Next ${unit}`}
+                            className={navButton}
+                        >
+                            <ChevronIcon className="size-5 -rotate-90" />
+                        </button>
+                    </div>
+                    <h2
+                        id="calendar-range"
+                        className="order-first basis-full text-lg font-semibold tracking-tight text-stone-900 md:order-none md:basis-auto"
+                        aria-live="polite"
+                    >
+                        {label}
+                        {calendar.isFetching && !loading && (
+                            <span className="sr-only">, loading</span>
+                        )}
+                    </h2>
+                    <div
+                        className="flex w-full rounded-control bg-stone-100 p-1 sm:ml-auto sm:inline-flex sm:w-auto"
+                        role="group"
+                        aria-label="Calendar view"
+                    >
+                        {calendarViews.map((v) => {
+                            const selected = v.id === view;
+                            return (
+                                <button
+                                    key={v.id}
+                                    type="button"
+                                    aria-pressed={selected}
+                                    onClick={() => update({ view: v.id === 'month' ? null : v.id })}
+                                    className={`inline-flex min-h-8 flex-1 items-center justify-center rounded-[6px] px-3.5 text-sm sm:flex-none font-semibold transition-colors ${selected ? 'bg-white text-stone-900 ring-1 ring-stone-200' : 'text-stone-600 hover:text-stone-900'}`}
+                                >
+                                    {v.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                <div
+                    className={`transition-opacity duration-150 ${calendar.isFetching && !loading ? 'opacity-60' : ''}`}
+                >
+                    {view === 'month' && (
+                        <>
+                            <div className="hidden md:block">
+                                <MonthGrid
+                                    days={days}
+                                    anchor={anchor}
                                     events={events}
                                     loading={loading}
-                                    heading={`${shortDay.format(day)}${sameDay(day, new Date()) ? ', today' : ''}`}
+                                    onOpenDay={openDay}
                                 />
-                            ))}
-                        </div>
-                    </>
-                )}
-                {view === 'day' && <Agenda day={anchor} events={events} loading={loading} />}
-            </div>
+                            </div>
+                            <div className="md:hidden">
+                                <MonthDots
+                                    days={days}
+                                    anchor={anchor}
+                                    events={events}
+                                    onPick={(day) => update({ date: dayKey(day) })}
+                                />
+                                <div className="border-t border-stone-200">
+                                    <h3 className="px-4 pt-3 text-sm font-semibold text-stone-900">
+                                        {longDay.format(anchor)}
+                                    </h3>
+                                    <DayList day={anchor} events={events} loading={loading} />
+                                </div>
+                            </div>
+                        </>
+                    )}
+                    {view === 'week' && (
+                        <>
+                            <div className="hidden md:block">
+                                <WeekColumns
+                                    days={days}
+                                    events={events}
+                                    loading={loading}
+                                    onOpenDay={openDay}
+                                />
+                            </div>
+                            <div className="md:hidden">
+                                <WeekList days={days} events={events} loading={loading} />
+                            </div>
+                        </>
+                    )}
+                    {view === 'day' && <DayList day={anchor} events={events} loading={loading} />}
+                </div>
 
-            <Legend />
+                <Legend />
+            </section>
         </div>
     );
 }

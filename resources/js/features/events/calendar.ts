@@ -112,14 +112,16 @@ export function staffing(event: CalendarEvent): Staffing {
 const clock = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
 
 // How the event sits on one day: "8:00 AM to 5:00 PM", "From 8:00 AM", "Until 5:00 PM" or "All day".
-export function timeOnDay(event: CalendarEvent, day: Date): string {
+// Compact gives "8am to 5pm" for narrow columns.
+export function timeOnDay(event: CalendarEvent, day: Date, compact = false): string {
+    const format = (date: Date) => (compact ? compactTime(date) : clock.format(date));
     const start = new Date(event.starts_at);
     const end = new Date(event.ends_at);
     const startsToday = start >= day;
     const endsToday = end <= addDays(day, 1);
-    if (startsToday && endsToday) return `${clock.format(start)} to ${clock.format(end)}`;
-    if (startsToday) return `From ${clock.format(start)}`;
-    if (endsToday) return `Until ${clock.format(end)}`;
+    if (startsToday && endsToday) return `${format(start)} to ${format(end)}`;
+    if (startsToday) return `From ${format(start)}`;
+    if (endsToday) return `Until ${format(end)}`;
     return 'All day';
 }
 
@@ -151,4 +153,13 @@ export function rangeLabel(view: CalendarView, anchor: Date): string {
         return `${monthDay.format(first)} to ${last.getDate()}, ${last.getFullYear()}`;
     }
     return `${monthDay.format(first)} to ${monthDay.format(last)}, ${last.getFullYear()}`;
+}
+
+// "9am" or "10:30pm", for tight spots like month cells.
+export function compactTime(date: Date): string {
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const suffix = hours < 12 ? 'am' : 'pm';
+    const hour = hours % 12 || 12;
+    return minutes ? `${hour}:${String(minutes).padStart(2, '0')}${suffix}` : `${hour}${suffix}`;
 }
