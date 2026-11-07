@@ -120,6 +120,7 @@ Tags: module (`core`, `personnel`, `access`, `events`, `notifications`, `monitor
 - Each change queues one NOTIFICATION and one email through the queue.
 - Failed sends retry 3 times, then show as failed.
 - Email has a link that opens the assignment.
+- Later: the Events module has no hook for this yet. When it is built, call it from assignment create, move and cancel in `AssignmentController`.
 
 **S3.5 Shift reminders** `notifications` `mobile` **M**
 - Reminder at 6:00 PM the evening before and 1 hour before.
@@ -130,9 +131,16 @@ Tags: module (`core`, `personnel`, `access`, `events`, `notifications`, `monitor
 
 **S3.7 Admin dashboard** `events` `desktop` **M**
 - Today's events, unacknowledged assignments, people not on duty 30 minutes after shift start.
+- Later (needs S4.1): the "not on duty" list shows people whose duty never started. Until start duty exists, it lists everyone not yet started, so it is not accurate.
+
+**S3.9 Calendar view** `events` `desktop` **S**
+- Admin sees events by month, week or day from `GET /api/events/calendar`, through a List and Calendar switch on the Events page (no separate sidebar link). Click an event to open it.
+- Done: month, week and day views, status tones, staffing bars, filters and a phone layout.
+- Done: published events become completed after they end (`events:complete-ended`).
 
 **S3.8 No-show marking** `events` `both` **S**
 - Assignments never started become no_show at shift end.
+- Later (needs S4.1): once duty can start, `on_duty` and `completed` assignments are skipped by the job. The job already skips them.
 
 ## M4 Monitoring
 

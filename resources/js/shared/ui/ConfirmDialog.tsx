@@ -1,6 +1,6 @@
 // Ask before an action. A native <dialog>: centered on desktop, a bottom sheet on phones.
 // Rules are in docs/DESIGN_SYSTEM.md section 6.
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { Alert } from './Alert';
 import { Button } from './Button';
 
@@ -13,8 +13,14 @@ interface ConfirmDialogProps {
     loading?: boolean;
     loadingLabel?: string;
     error?: string | null;
+    // danger (red) when the action destroys data or cannot be undone.
+    tone?: 'primary' | 'danger';
     onConfirm: () => void;
     onCancel: () => void;
+    // Extra content under the description, such as a reason field.
+    children?: ReactNode;
+    // Disables the confirm button, for example until a reason is typed.
+    confirmDisabled?: boolean;
 }
 
 export function ConfirmDialog({
@@ -26,8 +32,11 @@ export function ConfirmDialog({
     loading = false,
     loadingLabel,
     error = null,
+    tone = 'primary',
     onConfirm,
     onCancel,
+    children,
+    confirmDisabled = false,
 }: ConfirmDialogProps) {
     const dialogRef = useRef<HTMLDialogElement>(null);
     const cancelRef = useRef<HTMLButtonElement>(null);
@@ -78,6 +87,7 @@ export function ConfirmDialog({
                 <p id={bodyId} className="mt-2 text-stone-600">
                     {description}
                 </p>
+                {children && <div className="mt-4">{children}</div>}
                 {error && (
                     <div className="mt-4">
                         <Alert tone="error">{error}</Alert>
@@ -94,8 +104,9 @@ export function ConfirmDialog({
                         {cancelLabel}
                     </Button>
                     <Button
-                        variant="primary"
+                        variant={tone}
                         loading={loading}
+                        disabled={confirmDisabled}
                         onClick={onConfirm}
                         className="w-full sm:w-auto sm:min-h-10 sm:px-4 sm:text-sm"
                     >

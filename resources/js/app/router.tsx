@@ -1,4 +1,5 @@
 import { createBrowserRouter } from 'react-router';
+import { adminEventRoutes, dashboardRoute, myDutiesRoute } from '@/features/events/routes';
 import { AdminLayout } from '@/layouts/AdminLayout';
 import { MobileLayout } from '@/layouts/MobileLayout';
 import { CookieNotice } from '@/pages/CookieNotice';
@@ -9,7 +10,6 @@ import { RequestAccess } from '@/pages/RequestAccess';
 import { VerifyEmail } from '@/pages/VerifyEmail';
 import { WaitingForApproval } from '@/pages/WaitingForApproval';
 import { ResetPassword } from '@/pages/ResetPassword';
-import { Placeholder } from '@/pages/Placeholder';
 import { HomeRedirect, RequireAuth } from './RequireAuth';
 import { NotFound } from '@/pages/NotFound';
 
@@ -31,8 +31,9 @@ export const router = createBrowserRouter([
                 path: '/admin',
                 element: <AdminLayout />,
                 children: [
-                    { index: true, element: <Placeholder title="Dashboard" /> },
+                    dashboardRoute,
                     { path: 'requests', element: <AccessRequests /> },
+                    ...adminEventRoutes,
                 ],
             },
         ],
@@ -43,7 +44,7 @@ export const router = createBrowserRouter([
             {
                 path: '/me',
                 element: <MobileLayout />,
-                children: [{ index: true, element: <Placeholder title="My duties" /> }],
+                children: [myDutiesRoute],
             },
         ],
     },
