@@ -226,7 +226,7 @@ All in `resources/js/shared/ui`. Add a new shared piece only when two screens ne
 - Tap targets at least 48 by 48 px, with 8 px between them.
 - Keep the main action in the lower half of the screen, where thumbs reach.
 - Respect the iPhone safe area with `pb-[env(safe-area-inset-bottom)]`.
-- Above 768 px the content sits in a centered column, as SCREENS.md says.
+- From 768 px the tabs move into the top bar (icon and label, maroon underline on the active tab) and the bottom bar hides. Content sits in a centered column up to 1152 px (`max-w-6xl`), and card lists use two columns from 1024 px.
 
 ### Admin screens (desktop first)
 

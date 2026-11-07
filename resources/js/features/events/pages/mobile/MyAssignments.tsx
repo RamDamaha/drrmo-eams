@@ -53,7 +53,7 @@ function DutyCard({ duty }: { duty: MyAssignment }) {
         <li>
             <article
                 aria-labelledby={headingId}
-                className="rounded-card bg-white ring-1 ring-stone-200"
+                className="h-full rounded-card bg-white ring-1 ring-stone-200"
             >
                 <div className="flex gap-4 p-4">
                     <DateBlock date={start} cancelled={cancelled} />
@@ -129,7 +129,7 @@ function DutyList({ title, duties }: { title: string; duties: MyAssignment[] }) 
                     {duties.length}
                 </span>
             </h2>
-            <ul className="mt-3 space-y-3">
+            <ul className="mt-3 grid gap-3 lg:grid-cols-2">
                 {duties.map((duty) => (
                     <DutyCard key={duty.id} duty={duty} />
                 ))}
@@ -140,7 +140,7 @@ function DutyList({ title, duties }: { title: string; duties: MyAssignment[] }) 
 
 function Skeleton() {
     return (
-        <div className="mt-6 space-y-3" aria-busy="true">
+        <div className="mt-6 grid gap-3 lg:grid-cols-2" aria-busy="true">
             <p role="status" className="sr-only">
                 Loading your duties...
             </p>
@@ -198,7 +198,7 @@ export function MyAssignments() {
             )}
 
             {duties.isSuccess && all.length === 0 && (
-                <div className="mt-6 flex flex-col items-center rounded-card bg-white px-6 py-10 text-center ring-1 ring-stone-200">
+                <div className="mt-6 flex max-w-2xl flex-col items-center rounded-card bg-white px-6 py-10 text-center ring-1 ring-stone-200 md:py-14">
                     <span className="flex size-11 items-center justify-center rounded-control border border-stone-200 text-maroon-700">
                         <ClipboardIcon className="size-5" />
                     </span>

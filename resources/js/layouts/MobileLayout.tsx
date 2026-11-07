@@ -81,20 +81,39 @@ function useOnline() {
 }
 
 // Mobile first (DESIGN_SYSTEM.md section 7): white top bar, stone-50 page, one column,
-// bottom tab bar with 48 px or larger tap targets. Above 768 px it stays a centered column.
+// bottom tab bar with 48 px or larger tap targets. From 768 px the tabs move into the top bar
+// and the content gets a wider column, so marshals and volunteers can use a desktop too.
 export function MobileLayout() {
     const online = useOnline();
 
     return (
         <div className="min-h-dvh bg-stone-50">
             <header className="sticky top-0 z-20 border-b border-stone-200 bg-white pt-[env(safe-area-inset-top)]">
-                <div className="mx-auto flex h-16 max-w-2xl items-center justify-between gap-3 pr-2 pl-4">
+                <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 pr-2 pl-4 md:gap-8 md:px-10">
                     <div className="flex min-w-0 items-center gap-3">
                         <BrandLogos size="sm" className="shrink-0 text-stone-900" />
                         <p className="truncate text-base font-bold tracking-tight text-stone-900">
                             DRRMO EAMS
                         </p>
                     </div>
+                    <nav aria-label="Main" className="hidden h-full flex-1 md:block">
+                        <ul className="flex h-full items-stretch gap-1">
+                            {tabs.map((tab) => (
+                                <li key={tab.to}>
+                                    <NavLink
+                                        to={tab.to}
+                                        end
+                                        className={({ isActive }) =>
+                                            `flex h-full items-center gap-2 border-b-2 px-3 text-sm transition-colors [&_svg]:size-5 ${isActive ? 'border-maroon-700 font-semibold text-maroon-700' : 'border-transparent font-medium text-stone-600 hover:border-stone-300 hover:text-stone-900'}`
+                                        }
+                                    >
+                                        {tab.icon}
+                                        {tab.label}
+                                    </NavLink>
+                                </li>
+                            ))}
+                        </ul>
+                    </nav>
                     <SignOutButton className="inline-flex min-h-12 shrink-0 items-center rounded-control px-3 text-sm font-semibold text-stone-700 transition-colors hover:bg-stone-100 active:bg-stone-200" />
                 </div>
                 {!online && (
@@ -110,14 +129,14 @@ export function MobileLayout() {
             <main
                 id="main"
                 tabIndex={-1}
-                className="mx-auto max-w-2xl px-6 pt-6 pb-[calc(6rem+env(safe-area-inset-bottom))] outline-none"
+                className="mx-auto max-w-6xl px-6 pt-6 pb-[calc(6rem+env(safe-area-inset-bottom))] outline-none md:px-10 md:pt-10 md:pb-16"
             >
                 <Outlet />
             </main>
 
             <nav
                 aria-label="Main"
-                className="fixed inset-x-0 bottom-0 z-20 border-t border-stone-200 bg-white pb-[env(safe-area-inset-bottom)]"
+                className="fixed inset-x-0 bottom-0 z-20 border-t border-stone-200 bg-white pb-[env(safe-area-inset-bottom)] md:hidden"
             >
                 <div className="mx-auto grid max-w-2xl grid-cols-4 px-2">
                     {tabs.map((tab) => (
