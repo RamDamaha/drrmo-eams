@@ -167,7 +167,10 @@ export async function updateEvent(id: number, input: NewEvent): Promise<EventSum
 }
 
 export async function cancelAssignment(id: number, reason: string): Promise<void> {
-    await api(`/api/assignments/${id}/cancel`, { method: 'POST', body: JSON.stringify({ reason }) });
+    await api(`/api/assignments/${id}/cancel`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+    });
 }
 
 export async function markNoShow(id: number): Promise<void> {

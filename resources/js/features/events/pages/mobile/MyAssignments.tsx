@@ -1,8 +1,8 @@
 // M-Duties (S1.5). A marshal or volunteer sees their own duties: event, time, place, duty type.
 // Mobile first at 360 px: one column, date block on the left, whole card readable at a glance.
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { listMyAssignments, type MyAssignment } from '@/features/events/api';
+import { acknowledgeAssignment, listMyAssignments, type MyAssignment } from '@/features/events/api';
 import { ClipboardIcon, ClockIcon, PinIcon } from '@/features/events/components/icons';
 import { chipClass } from '@/features/events/format';
 import { Alert } from '@/shared/ui/Alert';
@@ -46,7 +46,12 @@ function DateBlock({ date, cancelled }: { date: Date; cancelled: boolean }) {
 function DutyCard({ duty }: { duty: MyAssignment }) {
     const start = new Date(duty.starts_at);
     const end = new Date(duty.ends_at);
-    const cancelled = duty.event.status === 'cancelled';
+    const cancelled = duty.event.status === 'cancelled' || duty.status === 'cancelled';
+    const queryClient = useQueryClient();
+    const acknowledge = useMutation({
+        mutationFn: () => acknowledgeAssignment(duty.id),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['my-assignments'] }),
+    });
     const headingId = `duty-${duty.id}`;
 
     return (
@@ -112,6 +117,27 @@ function DutyCard({ duty }: { duty: MyAssignment }) {
                         <p className="mt-1 text-base text-pretty whitespace-pre-line text-stone-700">
                             {duty.instructions}
                         </p>
+                    </div>
+                )}
+                {!cancelled && (duty.status === 'assigned' || duty.status === 'acknowledged') && (
+                    <div className="border-t border-stone-100 px-4 py-3">
+                        {duty.status === 'acknowledged' ? (
+                            <p className="text-sm font-medium text-green-800">Acknowledged</p>
+                        ) : (
+                            <Button
+                                size="lg"
+                                className="w-full"
+                                loading={acknowledge.isPending}
+                                onClick={() => acknowledge.mutate()}
+                            >
+                                Acknowledge duty
+                            </Button>
+                        )}
+                        {acknowledge.isError && (
+                            <p role="alert" className="mt-2 text-sm text-red-700">
+                                That did not save. Try again.
+                            </p>
+                        )}
                     </div>
                 )}
             </article>

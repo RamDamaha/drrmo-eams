@@ -148,7 +148,8 @@ function DutyGroup({
         mutationFn: async (row: Assignment) => {
             if (row.status === 'assigned') return removeAssignment(row.id);
             const reason = window.prompt(`Why is ${row.person.name} being taken off this duty?`);
-            if (!reason || reason.trim().length < 5) throw new Error('A reason of at least 5 characters is needed.');
+            if (!reason || reason.trim().length < 5)
+                throw new Error('A reason of at least 5 characters is needed.');
             return cancelAssignment(row.id, reason.trim());
         },
         onSuccess: refresh,
@@ -159,7 +160,8 @@ function DutyGroup({
         onSuccess: refresh,
         onError: (failure) => onError(failMessage(failure)),
     });
-    const started = new Date(requirement.shift_starts_at).getTime() <= Date.now();
+    const [now] = useState(() => Date.now());
+    const started = new Date(requirement.shift_starts_at).getTime() <= now;
     const dropDuty = useMutation({
         mutationFn: () => removeRequirement(requirement.id),
         onSuccess: refresh,
@@ -238,12 +240,16 @@ function DutyGroup({
                                 <p className="truncate font-medium text-stone-900">
                                     {row.person.name}
                                     {row.status === 'acknowledged' && (
-                                        <span className={`${chipClass} ml-2 bg-green-50 text-green-800 ring-green-200`}>
+                                        <span
+                                            className={`${chipClass} ml-2 bg-green-50 text-green-800 ring-green-200`}
+                                        >
                                             Acknowledged
                                         </span>
                                     )}
                                     {row.status === 'no_show' && (
-                                        <span className={`${chipClass} ml-2 bg-red-50 text-red-800 ring-red-200`}>
+                                        <span
+                                            className={`${chipClass} ml-2 bg-red-50 text-red-800 ring-red-200`}
+                                        >
                                             No show
                                         </span>
                                     )}
@@ -252,33 +258,36 @@ function DutyGroup({
                                     {row.person.email}
                                 </p>
                             </div>
-                            {editable && started && (row.status === 'assigned' || row.status === 'acknowledged') && (
-                                <Button
-                                    size="md"
-                                    variant="ghost"
-                                    onClick={() => {
-                                        onError(null);
-                                        noShow.mutate(row.id);
-                                    }}
-                                    aria-label={`Mark ${row.person.name} as no show`}
-                                >
-                                    No show
-                                </Button>
-                            )}
-                            {editable && (row.status === 'assigned' || row.status === 'acknowledged') && (
-                                <Button
-                                    size="md"
-                                    variant="ghost"
-                                    loading={removing}
-                                    onClick={() => {
-                                        onError(null);
-                                        remove.mutate(row);
-                                    }}
-                                    aria-label={`Remove ${row.person.name}`}
-                                >
-                                    {removing ? 'Removing...' : 'Remove'}
-                                </Button>
-                            )}
+                            {editable &&
+                                started &&
+                                (row.status === 'assigned' || row.status === 'acknowledged') && (
+                                    <Button
+                                        size="md"
+                                        variant="ghost"
+                                        onClick={() => {
+                                            onError(null);
+                                            noShow.mutate(row.id);
+                                        }}
+                                        aria-label={`Mark ${row.person.name} as no show`}
+                                    >
+                                        No show
+                                    </Button>
+                                )}
+                            {editable &&
+                                (row.status === 'assigned' || row.status === 'acknowledged') && (
+                                    <Button
+                                        size="md"
+                                        variant="ghost"
+                                        loading={removing}
+                                        onClick={() => {
+                                            onError(null);
+                                            remove.mutate(row);
+                                        }}
+                                        aria-label={`Remove ${row.person.name}`}
+                                    >
+                                        {removing ? 'Removing...' : 'Remove'}
+                                    </Button>
+                                )}
                         </li>
                     );
                 })}
@@ -582,7 +591,9 @@ function PickPeople({ requirement, onDone }: { requirement: Requirement; onDone:
                                             {person.name}
                                         </span>
                                         {person.conflict && (
-                                            <span className={`${chipClass} bg-amber-50 text-amber-800 ring-amber-200`}>
+                                            <span
+                                                className={`${chipClass} bg-amber-50 text-amber-800 ring-amber-200`}
+                                            >
                                                 Busy: {person.conflict}
                                             </span>
                                         )}
