@@ -118,6 +118,9 @@ export function Events() {
                                     <th scope="col" className={headCell}>
                                         Status
                                     </th>
+                                    <th scope="col" className={headCell}>
+                                        <span className="sr-only">Personnel</span>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-stone-100">
@@ -159,6 +162,14 @@ export function Events() {
                                                 <span className={`${chipClass} ${status.chip}`}>
                                                     {status.label}
                                                 </span>
+                                            </td>
+                                            <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                                                <Link
+                                                    to={`/admin/events/${event.id}`}
+                                                    className="inline-flex min-h-9 items-center rounded-control border border-stone-300 bg-white px-3 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-50"
+                                                >
+                                                    Assign people
+                                                </Link>
                                             </td>
                                         </tr>
                                     );
