@@ -160,3 +160,11 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Problem met and fix: jsdom has no `showModal`, so the test setup adds a small stand-in that only toggles the open state
 - Evidence: resources/js/app/signOut.test.tsx, resources/js/pages/Login.test.tsx
 - Paper: Chapter 3 (user interface design), Chapter 4 (usability)
+
+## 2026-11-07 · Admin sidebar design pass (core)
+- What was built: the admin sidebar now follows DESIGN_SYSTEM.md section 7. It is maroon-900 with the ZPPSU and DRRMO logos at the top, line icons, and links grouped under Operations, Personnel, Communication and System. The active link is white with a gold-400 bar on its left edge. The bottom shows who is signed in and a Sign out button. The content area moved to a stone-50 background
+- Decision and why: from 768 to 1023 px the sidebar shrinks to an icon rail with a small label on hover or focus, and below 768 px it becomes a maroon top bar with a menu, as SCREENS.md asks
+- Decision and why: Events stays lit on an event's detail and edit pages, because only Dashboard matches its path exactly. Before, every link needed an exact match
+- Decision and why: `SignOutButton` takes optional children so the sidebar can show an icon with the label. Its behavior did not change
+- Evidence: resources/js/layouts/AdminLayout.test.tsx
+- Paper: Chapter 3 (user interface design)

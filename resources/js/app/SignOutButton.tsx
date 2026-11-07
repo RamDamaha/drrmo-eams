@@ -1,10 +1,17 @@
 // Asks "Sign out?" first, then ends the session and returns to the login page. Used by both layouts.
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
 import { useAuthActions } from './auth';
 
-export function SignOutButton({ className = '' }: { className?: string }) {
+// children replaces the plain "Sign out" text, for example with an icon and a label.
+export function SignOutButton({
+    className = '',
+    children = 'Sign out',
+}: {
+    className?: string;
+    children?: ReactNode;
+}) {
     const { logout } = useAuthActions();
     const navigate = useNavigate();
     const [open, setOpen] = useState(false);
@@ -33,7 +40,7 @@ export function SignOutButton({ className = '' }: { className?: string }) {
     return (
         <>
             <button type="button" onClick={() => setOpen(true)} className={className}>
-                Sign out
+                {children}
             </button>
             <ConfirmDialog
                 open={open}
