@@ -1,5 +1,5 @@
 import { createBrowserRouter } from 'react-router';
-import { adminEventRoutes } from '@/features/events/routes';
+import { adminEventRoutes, myDutiesRoute } from '@/features/events/routes';
 import { AdminLayout } from '@/layouts/AdminLayout';
 import { MobileLayout } from '@/layouts/MobileLayout';
 import { CookieNotice } from '@/pages/CookieNotice';
@@ -45,7 +45,7 @@ export const router = createBrowserRouter([
             {
                 path: '/me',
                 element: <MobileLayout />,
-                children: [{ index: true, element: <Placeholder title="My duties" /> }],
+                children: [myDutiesRoute],
             },
         ],
     },

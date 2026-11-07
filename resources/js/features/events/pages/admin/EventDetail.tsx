@@ -1,15 +1,20 @@
-// A-Event detail (SCREENS.md). Admin sees the event and assigns marshals and volunteers.
+// A-Event detail (SCREENS.md). Admin sees the event, adds duty requirements and fills them with people.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
 import {
     assignPerson,
+    cancelEvent,
+    createRequirement,
     getEvent,
     getLookups,
     listCandidates,
+    publishEvent,
     removeAssignment,
-    type Assignment,
-    type Candidate,
+    removeRequirement,
+    type EventSummary,
+    type Option,
+    type Requirement,
 } from '@/features/events/api';
 import {
     CalendarIcon,
@@ -23,6 +28,8 @@ import { chipClass, schedule, statuses } from '@/features/events/format';
 import { ApiError } from '@/shared/api/client';
 import { Alert } from '@/shared/ui/Alert';
 import { Button } from '@/shared/ui/Button';
+import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
+import { TextField } from '@/shared/ui/TextField';
 
 type Role = 'marshal' | 'volunteer';
 
@@ -59,48 +66,57 @@ function Meta({ icon, children }: { icon: ReactNode; children: ReactNode }) {
     );
 }
 
-interface SectionProps {
-    eventId: number;
-    role: Role;
-    assignments: Assignment[];
-    candidates: Candidate[];
-    candidatesReady: boolean;
-    taskTypes: { id: number; name: string }[];
+interface CardProps {
+    requirement: Requirement;
+    editable: boolean;
 }
 
-function RoleSection({
-    eventId,
-    role,
-    assignments,
-    candidates,
-    candidatesReady,
-    taskTypes,
-}: SectionProps) {
+const time = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
+const dayTime = new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+});
+
+function shiftText(startsAt: string, endsAt: string) {
+    const start = new Date(startsAt);
+    const end = new Date(endsAt);
+    return start.toDateString() === end.toDateString()
+        ? `${dayTime.format(start)} to ${time.format(end)}`
+        : `${dayTime.format(start)} to ${dayTime.format(end)}`;
+}
+
+function RequirementCard({ requirement, editable }: CardProps) {
     const queryClient = useQueryClient();
     const [userId, setUserId] = useState('');
-    const [taskId, setTaskId] = useState('');
     const [error, setError] = useState<string | null>(null);
-    const labels = roleLabels[role];
-    const headingId = `${role}-heading`;
+    const labels = roleLabels[requirement.role];
+    const headingId = `requirement-${requirement.id}`;
+    const full = requirement.assignments.length >= requirement.headcount;
+
+    const candidates = useQuery({
+        queryKey: ['requirement-candidates', requirement.id],
+        queryFn: () => listCandidates(requirement.id),
+        enabled: editable,
+    });
 
     const refresh = () =>
         Promise.all([
-            queryClient.invalidateQueries({ queryKey: ['event', eventId] }),
-            queryClient.invalidateQueries({ queryKey: ['event-candidates', eventId] }),
+            queryClient.invalidateQueries({ queryKey: ['event'] }),
+            queryClient.invalidateQueries({ queryKey: ['requirement-candidates'] }),
         ]);
     const failed = (failure: unknown) =>
         setError(
             failure instanceof ApiError && failure.status === 422
-                ? 'That person cannot be assigned. Refresh the page and try again.'
+                ? 'That did not work. The duty may be full or the person already assigned. Refresh and try again.'
                 : 'That did not work. Check your connection and try again.',
         );
 
     const add = useMutation({
-        mutationFn: () =>
-            assignPerson(eventId, { user_id: Number(userId), duty_type_id: Number(taskId) }),
+        mutationFn: () => assignPerson(requirement.id, Number(userId)),
         onSuccess: () => {
             setUserId('');
-            setTaskId('');
             return refresh();
         },
         onError: failed,
@@ -110,15 +126,20 @@ function RoleSection({
         onSuccess: refresh,
         onError: failed,
     });
+    const dropDuty = useMutation({
+        mutationFn: () => removeRequirement(requirement.id),
+        onSuccess: refresh,
+        onError: failed,
+    });
 
     function submit(event: FormEvent) {
         event.preventDefault();
         setError(null);
-        if (userId && taskId) add.mutate();
+        if (userId) add.mutate();
     }
 
-    const options = candidates.filter((person) => person.role === role);
-    const personPlaceholder = !candidatesReady
+    const options = candidates.data ?? [];
+    const placeholder = !candidates.isSuccess
         ? 'Loading people...'
         : options.length
           ? 'Choose a person'
@@ -129,26 +150,41 @@ function RoleSection({
             aria-labelledby={headingId}
             className="flex flex-col rounded-card bg-white ring-1 ring-stone-200"
         >
-            <header className="flex items-baseline justify-between gap-4 border-b border-stone-200 px-6 py-4">
-                <h2 id={headingId} className="text-lg font-semibold text-stone-900">
-                    {labels.plural}
-                </h2>
-                <p className="text-sm text-stone-600 tabular-nums">{assignments.length} assigned</p>
+            <header className="border-b border-stone-200 px-6 py-4">
+                <div className="flex items-baseline justify-between gap-4">
+                    <h2 id={headingId} className="text-lg font-semibold text-stone-900">
+                        {requirement.duty_type.name}
+                        <span className="ml-2 text-sm font-normal text-stone-600">
+                            {labels.plural}
+                            {requirement.team_needed ? `, ${requirement.team_needed}` : ''}
+                        </span>
+                    </h2>
+                    <p
+                        className={`shrink-0 text-sm tabular-nums ${full ? 'font-medium text-green-800' : 'text-stone-600'}`}
+                    >
+                        {requirement.assignments.length} of {requirement.headcount} filled
+                    </p>
+                </div>
+                <p className="mt-1 text-sm text-stone-700 tabular-nums">
+                    {shiftText(requirement.shift_starts_at, requirement.shift_ends_at)}
+                </p>
+                {requirement.instructions && (
+                    <p className="mt-2 whitespace-pre-line text-sm text-stone-600">
+                        {requirement.instructions}
+                    </p>
+                )}
             </header>
 
-            {assignments.length === 0 ? (
-                <div className="flex flex-1 flex-col items-center px-6 py-10 text-center">
+            {requirement.assignments.length === 0 ? (
+                <div className="flex flex-1 flex-col items-center px-6 py-8 text-center">
                     <span className="flex size-11 items-center justify-center rounded-control border border-stone-200 text-maroon-700">
                         <PeopleIcon className="size-5" />
                     </span>
-                    <p className="mt-3 font-medium text-stone-900">
-                        No {labels.plural.toLowerCase()} yet
-                    </p>
-                    <p className="mt-0.5 text-sm text-stone-600">Pick a person and a task below.</p>
+                    <p className="mt-3 font-medium text-stone-900">No one assigned yet</p>
                 </div>
             ) : (
                 <ul className="flex-1 divide-y divide-stone-100">
-                    {assignments.map((row) => {
+                    {requirement.assignments.map((row) => {
                         const removing = remove.isPending && remove.variables === row.id;
                         return (
                             <li
@@ -169,76 +205,233 @@ function RoleSection({
                                         {row.person.email}
                                     </p>
                                 </div>
-                                <p className="hidden w-36 shrink-0 text-sm text-stone-700 sm:block">
-                                    <span className="sr-only">Task: </span>
-                                    {row.task_type.name}
-                                </p>
-                                <Button
-                                    size="md"
-                                    variant="secondary"
-                                    loading={removing}
-                                    onClick={() => {
-                                        setError(null);
-                                        remove.mutate(row.id);
-                                    }}
-                                    aria-label={`Remove ${row.person.name}`}
-                                >
-                                    {removing ? 'Removing...' : 'Remove'}
-                                </Button>
+                                {editable && (
+                                    <Button
+                                        size="md"
+                                        variant="secondary"
+                                        loading={removing}
+                                        onClick={() => {
+                                            setError(null);
+                                            remove.mutate(row.id);
+                                        }}
+                                        aria-label={`Remove ${row.person.name}`}
+                                    >
+                                        {removing ? 'Removing...' : 'Remove'}
+                                    </Button>
+                                )}
                             </li>
                         );
                     })}
                 </ul>
             )}
 
-            <form
-                onSubmit={submit}
-                className="space-y-4 rounded-b-card border-t border-stone-200 bg-stone-50 px-6 py-5"
-            >
-                <h3 className="text-sm font-semibold text-stone-900">Add a {labels.one}</h3>
-                <div className="grid items-end gap-3 sm:grid-cols-[1fr_1fr_auto]">
-                    <SelectField
-                        id={`${role}-person`}
-                        label="Person"
-                        size="md"
-                        placeholder={personPlaceholder}
-                        value={userId}
-                        onChange={(e) => setUserId(e.target.value)}
-                        disabled={!candidatesReady || options.length === 0}
-                    >
-                        {options.map((person) => (
-                            <SelectOption key={person.id} value={person.id}>
-                                {person.name}
-                            </SelectOption>
-                        ))}
-                    </SelectField>
-                    <SelectField
-                        id={`${role}-task`}
-                        label="Task type"
-                        size="md"
-                        placeholder="Choose a task"
-                        value={taskId}
-                        onChange={(e) => setTaskId(e.target.value)}
-                        disabled={taskTypes.length === 0}
-                    >
-                        {taskTypes.map((task) => (
-                            <SelectOption key={task.id} value={task.id}>
-                                {task.name}
-                            </SelectOption>
-                        ))}
-                    </SelectField>
-                    <Button
-                        type="submit"
-                        size="md"
-                        loading={add.isPending}
-                        disabled={!userId || !taskId}
-                    >
-                        {add.isPending ? 'Assigning...' : 'Assign'}
-                    </Button>
-                </div>
-                {error && <Alert tone="error">{error}</Alert>}
-            </form>
+            {editable && (
+                <form
+                    onSubmit={submit}
+                    className="space-y-4 rounded-b-card border-t border-stone-200 bg-stone-50 px-6 py-5"
+                >
+                    <div className="grid items-end gap-3 sm:grid-cols-[1fr_auto_auto]">
+                        <SelectField
+                            id={`${headingId}-person`}
+                            label={`Add a ${labels.one}`}
+                            size="md"
+                            placeholder={full ? 'This duty is full' : placeholder}
+                            value={userId}
+                            onChange={(e) => setUserId(e.target.value)}
+                            disabled={full || !candidates.isSuccess || options.length === 0}
+                        >
+                            {options.map((person) => (
+                                <SelectOption key={person.id} value={person.id}>
+                                    {person.name}
+                                </SelectOption>
+                            ))}
+                        </SelectField>
+                        <Button type="submit" size="md" loading={add.isPending} disabled={!userId}>
+                            {add.isPending ? 'Assigning...' : 'Assign'}
+                        </Button>
+                        {requirement.assignments.length === 0 && (
+                            <Button
+                                type="button"
+                                size="md"
+                                variant="secondary"
+                                loading={dropDuty.isPending}
+                                onClick={() => {
+                                    setError(null);
+                                    dropDuty.mutate();
+                                }}
+                            >
+                                Delete duty
+                            </Button>
+                        )}
+                    </div>
+                    {error && <Alert tone="error">{error}</Alert>}
+                </form>
+            )}
         </section>
+    );
+}
+
+// Local date and time input value to an exact moment for the server.
+const toUtc = (value: string) => (value ? new Date(value).toISOString() : '');
+
+function AddRequirement({ event, taskTypes }: { event: EventSummary; taskTypes: Option[] }) {
+    const queryClient = useQueryClient();
+    const [open, setOpen] = useState(false);
+    const [errors, setErrors] = useState<Record<string, string[]>>({});
+    const [dutyTypeId, setDutyTypeId] = useState('');
+    const [role, setRole] = useState('');
+    const [team, setTeam] = useState('');
+    const [headcount, setHeadcount] = useState('1');
+    const [startsAt, setStartsAt] = useState('');
+    const [endsAt, setEndsAt] = useState('');
+    const [instructions, setInstructions] = useState('');
+    const [formError, setFormError] = useState<string | null>(null);
+
+    const save = useMutation({
+        mutationFn: () =>
+            createRequirement(event.id, {
+                duty_type_id: Number(dutyTypeId),
+                role,
+                team_needed: team,
+                headcount: Number(headcount),
+                shift_starts_at: toUtc(startsAt),
+                shift_ends_at: toUtc(endsAt),
+                instructions,
+            }),
+        onSuccess: async () => {
+            setOpen(false);
+            setDutyTypeId('');
+            setRole('');
+            setTeam('');
+            setHeadcount('1');
+            setStartsAt('');
+            setEndsAt('');
+            setInstructions('');
+            await queryClient.invalidateQueries({ queryKey: ['event', event.id] });
+        },
+        onError: (failure) => {
+            const body =
+                failure instanceof ApiError
+                    ? (failure.body as { errors?: Record<string, string[]> } | null)
+                    : null;
+            if (failure instanceof ApiError && failure.status === 422 && body?.errors) {
+                setErrors(body.errors);
+            } else {
+                setFormError('That did not work. Check your connection and try again.');
+            }
+        },
+    });
+
+    const first = (key: string) => errors[key]?.[0] ?? null;
+
+    function submit(e: FormEvent) {
+        e.preventDefault();
+        setErrors({});
+        setFormError(null);
+        save.mutate();
+    }
+
+    if (!open) {
+        return (
+            <Button variant="secondary" size="md" onClick={() => setOpen(true)}>
+                Add duty requirement
+            </Button>
+        );
+    }
+
+    return (
+        <form
+            onSubmit={submit}
+            className="space-y-4 rounded-card bg-white p-6 ring-1 ring-stone-200"
+        >
+            <h2 className="text-lg font-semibold text-stone-900">New duty requirement</h2>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <SelectField
+                    label="Duty type"
+                    placeholder="Choose a duty"
+                    value={dutyTypeId}
+                    onChange={(e) => setDutyTypeId(e.target.value)}
+                    error={first('duty_type_id')}
+                    required
+                >
+                    {taskTypes.map((task) => (
+                        <SelectOption key={task.id} value={task.id}>
+                            {task.name}
+                        </SelectOption>
+                    ))}
+                </SelectField>
+                <SelectField
+                    label="Role needed"
+                    placeholder="Choose a role"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    error={first('role')}
+                    required
+                >
+                    <SelectOption value="marshal">Marshal</SelectOption>
+                    <SelectOption value="volunteer">Volunteer</SelectOption>
+                </SelectField>
+                <TextField
+                    label="Team (optional)"
+                    value={team}
+                    onChange={(e) => setTeam(e.target.value)}
+                    error={first('team_needed')}
+                    maxLength={100}
+                />
+                <TextField
+                    label="Headcount"
+                    type="number"
+                    min={1}
+                    value={headcount}
+                    onChange={(e) => setHeadcount(e.target.value)}
+                    error={first('headcount')}
+                    required
+                />
+                <TextField
+                    label="Shift starts"
+                    type="datetime-local"
+                    value={startsAt}
+                    onChange={(e) => setStartsAt(e.target.value)}
+                    error={first('shift_starts_at')}
+                    required
+                />
+                <TextField
+                    label="Shift ends"
+                    type="datetime-local"
+                    value={endsAt}
+                    min={startsAt || undefined}
+                    onChange={(e) => setEndsAt(e.target.value)}
+                    error={first('shift_ends_at')}
+                    required
+                />
+            </div>
+            <div>
+                <label
+                    htmlFor="requirement-instructions"
+                    className="mb-1.5 block text-sm font-medium text-stone-800"
+                >
+                    Instructions (optional)
+                </label>
+                <textarea
+                    id="requirement-instructions"
+                    rows={3}
+                    maxLength={2000}
+                    value={instructions}
+                    onChange={(e) => setInstructions(e.target.value)}
+                    className="block w-full rounded-control border border-stone-300 bg-white px-3.5 py-2 text-base text-stone-900 hover:border-stone-400 focus:border-maroon-700 focus:ring-3 focus:ring-maroon-700/15 focus:outline-none"
+                />
+            </div>
+            <p className="text-sm text-stone-600">The shift must sit inside the event time.</p>
+            {formError && <Alert tone="error">{formError}</Alert>}
+            <div className="flex gap-3">
+                <Button type="submit" size="md" loading={save.isPending}>
+                    {save.isPending ? 'Saving...' : 'Save duty'}
+                </Button>
+                <Button type="button" variant="secondary" size="md" onClick={() => setOpen(false)}>
+                    Cancel
+                </Button>
+            </div>
+        </form>
     );
 }
 
@@ -271,14 +464,75 @@ function Skeleton() {
     );
 }
 
+function EventActions({ event }: { event: EventSummary }) {
+    const queryClient = useQueryClient();
+    const [confirmCancel, setConfirmCancel] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const done = async () => {
+        setConfirmCancel(false);
+        await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ['event', event.id] }),
+            queryClient.invalidateQueries({ queryKey: ['events'] }),
+        ]);
+    };
+    const failed = () => setError('That did not work. Refresh the page and try again.');
+    const publish = useMutation({
+        mutationFn: () => publishEvent(event.id),
+        onSuccess: done,
+        onError: failed,
+    });
+    const cancel = useMutation({
+        mutationFn: () => cancelEvent(event.id),
+        onSuccess: done,
+        onError: failed,
+    });
+
+    if (event.status !== 'draft' && event.status !== 'published') return null;
+
+    return (
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+            {event.status === 'draft' && (
+                <Button
+                    size="md"
+                    loading={publish.isPending}
+                    onClick={() => {
+                        setError(null);
+                        publish.mutate();
+                    }}
+                >
+                    {publish.isPending ? 'Publishing...' : 'Publish event'}
+                </Button>
+            )}
+            <Button
+                size="md"
+                variant="secondary"
+                onClick={() => {
+                    setError(null);
+                    setConfirmCancel(true);
+                }}
+            >
+                Cancel event
+            </Button>
+            {error && <Alert tone="error">{error}</Alert>}
+            <ConfirmDialog
+                open={confirmCancel}
+                title="Cancel this event?"
+                description="Assigned people will see the event as cancelled. This cannot be undone."
+                confirmLabel="Cancel event"
+                cancelLabel="Keep event"
+                loading={cancel.isPending}
+                loadingLabel="Cancelling..."
+                onConfirm={() => cancel.mutate()}
+                onCancel={() => setConfirmCancel(false)}
+            />
+        </div>
+    );
+}
+
 export function EventDetail() {
     const eventId = Number(useParams().id);
 
     const event = useQuery({ queryKey: ['event', eventId], queryFn: () => getEvent(eventId) });
-    const candidates = useQuery({
-        queryKey: ['event-candidates', eventId],
-        queryFn: () => listCandidates(eventId),
-    });
     const lookups = useQuery({ queryKey: ['event-lookups'], queryFn: getLookups });
 
     if (event.isPending) return <Skeleton />;
@@ -310,10 +564,10 @@ export function EventDetail() {
     }
 
     const data = event.data;
-    const assignments = data.assignments ?? [];
+    const requirements: Requirement[] = data.requirements ?? [];
     const status = statuses[data.status];
     const when = schedule(data.starts_at, data.ends_at);
-    const sideFailed = candidates.isError || lookups.isError;
+    const editable = data.status === 'draft' || data.status === 'published';
 
     return (
         <div className="mx-auto max-w-[1440px]">
@@ -343,42 +597,49 @@ export function EventDetail() {
                         {data.description}
                     </p>
                 )}
+                <EventActions event={data} />
             </header>
 
-            {sideFailed && (
+            {lookups.isError && (
                 <div className="mt-6 flex max-w-2xl flex-wrap items-start gap-3">
                     <div className="flex-1">
                         <Alert tone="error">
-                            The people or task types did not load, so you cannot assign yet.
+                            The duty types did not load, so you cannot add duties yet.
                         </Alert>
                     </div>
                     <Button
                         variant="secondary"
                         size="md"
-                        loading={candidates.isFetching || lookups.isFetching}
-                        onClick={() => {
-                            void candidates.refetch();
-                            void lookups.refetch();
-                        }}
+                        loading={lookups.isFetching}
+                        onClick={() => void lookups.refetch()}
                     >
                         Retry
                     </Button>
                 </div>
             )}
 
-            <div className="mt-8 grid gap-6 xl:grid-cols-2">
-                {(['marshal', 'volunteer'] as const).map((role) => (
-                    <RoleSection
-                        key={role}
-                        eventId={eventId}
-                        role={role}
-                        assignments={assignments.filter((row) => row.role === role)}
-                        candidates={candidates.data ?? []}
-                        candidatesReady={candidates.isSuccess}
-                        taskTypes={lookups.data?.task_types ?? []}
-                    />
-                ))}
-            </div>
+            <h2 className="mt-8 text-lg font-semibold text-stone-900">Duty requirements</h2>
+            {requirements.length === 0 ? (
+                <p className="mt-2 text-sm text-stone-600">
+                    No duties yet. Add what this event needs, then assign people to it.
+                </p>
+            ) : (
+                <div className="mt-4 grid gap-6 xl:grid-cols-2">
+                    {requirements.map((requirement) => (
+                        <RequirementCard
+                            key={requirement.id}
+                            requirement={requirement}
+                            editable={editable}
+                        />
+                    ))}
+                </div>
+            )}
+
+            {editable && lookups.data && (
+                <div className="mt-6 max-w-5xl">
+                    <AddRequirement event={data} taskTypes={lookups.data.task_types} />
+                </div>
+            )}
         </div>
     );
 }
