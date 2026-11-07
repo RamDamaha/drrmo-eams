@@ -31,6 +31,7 @@ import {
     CheckIcon,
     ChevronIcon,
     PinIcon,
+    PlusIcon,
     SlidersIcon,
 } from '@/features/events/components/icons';
 import { chipClass, statuses } from '@/features/events/format';
@@ -187,6 +188,30 @@ function MonthChip({ event, day }: { event: CalendarEvent; day: Date }) {
     );
 }
 
+// Today and later only. Opens New event with that day filled in.
+function canAdd(day: Date) {
+    return day >= startOfDay(new Date());
+}
+
+function newEventLink(day: Date) {
+    return `/admin/events/new?date=${dayKey(day)}`;
+}
+
+// A quiet plus that shows on hover or keyboard focus, for the month and week grids.
+function AddOnDay({ day }: { day: Date }) {
+    if (!canAdd(day)) return null;
+    return (
+        <Link
+            to={newEventLink(day)}
+            aria-label={`New event on ${longDay.format(day)}`}
+            title="New event on this day"
+            className="flex size-7 items-center justify-center rounded-full text-stone-500 opacity-0 transition hover:bg-maroon-50 hover:text-maroon-700 focus-visible:opacity-100 group-hover:opacity-100"
+        >
+            <PlusIcon className="size-4" />
+        </Link>
+    );
+}
+
 function DayNumber({
     day,
     muted,
@@ -252,14 +277,17 @@ function MonthGrid({
                     return (
                         <div
                             key={day.toISOString()}
-                            className={`min-h-36 p-1.5 ${inMonth ? 'bg-white' : 'bg-stone-50'}`}
+                            className={`group min-h-36 p-1.5 ${inMonth ? 'bg-white' : 'bg-stone-50'}`}
                         >
-                            <DayNumber
-                                day={day}
-                                muted={!inMonth}
-                                count={onDay.length}
-                                onOpen={() => onOpenDay(day)}
-                            />
+                            <div className="flex items-center justify-between">
+                                <DayNumber
+                                    day={day}
+                                    muted={!inMonth}
+                                    count={onDay.length}
+                                    onOpen={() => onOpenDay(day)}
+                                />
+                                <AddOnDay day={day} />
+                            </div>
                             {loading ? (
                                 index % 3 === 1 && (
                                     <div
@@ -423,7 +451,10 @@ function WeekColumns({
                 const isToday = sameDay(day, new Date());
                 const onDay = events.filter((event) => touchesDay(event, day));
                 return (
-                    <div key={day.toISOString()} className="flex min-h-[26rem] flex-col bg-white">
+                    <div
+                        key={day.toISOString()}
+                        className="group flex min-h-[26rem] flex-col bg-white"
+                    >
                         <button
                             type="button"
                             onClick={() => onOpenDay(day)}
@@ -455,6 +486,11 @@ function WeekColumns({
                                 : onDay.map((event) => (
                                       <WeekCard key={event.id} event={event} day={day} />
                                   ))}
+                            {!loading && (
+                                <div className="flex justify-center">
+                                    <AddOnDay day={day} />
+                                </div>
+                            )}
                         </div>
                     </div>
                 );
@@ -573,8 +609,17 @@ function DayList({
                 </span>
                 <p className="mt-3 text-sm font-medium text-stone-800">No events on this day</p>
                 <p className="mt-0.5 text-sm text-stone-600">
-                    Pick another day, or add a new event.
+                    {canAdd(day) ? 'Nothing is planned yet.' : 'Pick another day.'}
                 </p>
+                {canAdd(day) && (
+                    <Link
+                        to={newEventLink(day)}
+                        className="mt-4 inline-flex min-h-10 items-center gap-1.5 rounded-control border border-stone-300 bg-white pr-4 pl-3 text-sm font-semibold text-stone-800 transition-colors hover:border-maroon-700 hover:bg-maroon-50 hover:text-maroon-800"
+                    >
+                        <PlusIcon className="size-4" />
+                        New event on this day
+                    </Link>
+                )}
             </div>
         );
     }

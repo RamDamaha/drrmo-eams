@@ -1,7 +1,8 @@
 // A-Event form (SCREENS.md). Admin creates an event: title, campus location, start and end.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
+import { parseDayKey } from '@/features/events/calendar';
 import { createEvent, getEvent, getLookups, updateEvent } from '@/features/events/api';
 import { controlClass, duration, pickerClass } from '@/features/events/components/fields';
 import { ChevronIcon } from '@/features/events/components/icons';
@@ -58,8 +59,12 @@ export function NewEvent() {
     const [description, setDescription] = useState('');
     const [eventType, setEventType] = useState('');
     const [locationId, setLocationId] = useState('');
-    const [startsAt, setStartsAt] = useState('');
-    const [endsAt, setEndsAt] = useState('');
+    // "New event" on a calendar day opens with ?date=2026-11-10. Start with office hours that day.
+    const [params] = useSearchParams();
+    const pickedDay = editingId ? null : parseDayKey(params.get('date'));
+    const pickedKey = pickedDay ? params.get('date') : null;
+    const [startsAt, setStartsAt] = useState(pickedKey ? `${pickedKey}T08:00` : '');
+    const [endsAt, setEndsAt] = useState(pickedKey ? `${pickedKey}T17:00` : '');
     const [errors, setErrors] = useState<Errors>({});
     const [failure, setFailure] = useState<string | null>(null);
 
