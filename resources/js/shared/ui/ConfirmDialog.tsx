@@ -13,6 +13,8 @@ interface ConfirmDialogProps {
     loading?: boolean;
     loadingLabel?: string;
     error?: string | null;
+    // danger (red) when the action destroys data or cannot be undone.
+    tone?: 'primary' | 'danger';
     onConfirm: () => void;
     onCancel: () => void;
 }
@@ -26,6 +28,7 @@ export function ConfirmDialog({
     loading = false,
     loadingLabel,
     error = null,
+    tone = 'primary',
     onConfirm,
     onCancel,
 }: ConfirmDialogProps) {
@@ -94,7 +97,7 @@ export function ConfirmDialog({
                         {cancelLabel}
                     </Button>
                     <Button
-                        variant="primary"
+                        variant={tone}
                         loading={loading}
                         onClick={onConfirm}
                         className="w-full sm:w-auto sm:min-h-10 sm:px-4 sm:text-sm"

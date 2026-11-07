@@ -16,11 +16,15 @@ import {
     type Option,
     type Requirement,
 } from '@/features/events/api';
+import { controlClass, duration, pickerClass } from '@/features/events/components/fields';
 import {
     CalendarIcon,
     ChevronIcon,
+    ClipboardIcon,
+    ClockIcon,
     PeopleIcon,
     PinIcon,
+    PlusIcon,
     TagIcon,
 } from '@/features/events/components/icons';
 import { SelectField, SelectOption } from '@/features/events/components/SelectField';
@@ -93,7 +97,10 @@ function RequirementCard({ requirement, editable }: CardProps) {
     const [error, setError] = useState<string | null>(null);
     const labels = roleLabels[requirement.role];
     const headingId = `requirement-${requirement.id}`;
-    const full = requirement.assignments.length >= requirement.headcount;
+    const filled = requirement.assignments.length;
+    const full = filled >= requirement.headcount;
+    const open = Math.max(requirement.headcount - filled, 0);
+    const percent = Math.min(100, Math.round((filled / requirement.headcount) * 100));
 
     const candidates = useQuery({
         queryKey: ['requirement-candidates', requirement.id],
@@ -150,87 +157,113 @@ function RequirementCard({ requirement, editable }: CardProps) {
             aria-labelledby={headingId}
             className="flex flex-col rounded-card bg-white ring-1 ring-stone-200"
         >
-            <header className="border-b border-stone-200 px-6 py-4">
-                <div className="flex items-baseline justify-between gap-4">
-                    <h2 id={headingId} className="text-lg font-semibold text-stone-900">
-                        {requirement.duty_type.name}
-                        <span className="ml-2 text-sm font-normal text-stone-600">
+            <header className="px-6 pt-5 pb-4">
+                <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                        <p className="text-xs font-semibold tracking-[0.14em] text-stone-500 uppercase">
                             {labels.plural}
                             {requirement.team_needed ? `, ${requirement.team_needed}` : ''}
-                        </span>
-                    </h2>
-                    <p
-                        className={`shrink-0 text-sm tabular-nums ${full ? 'font-medium text-green-800' : 'text-stone-600'}`}
-                    >
-                        {requirement.assignments.length} of {requirement.headcount} filled
-                    </p>
+                        </p>
+                        <h3 id={headingId} className="mt-1 text-lg font-semibold text-stone-900">
+                            {requirement.duty_type.name}
+                        </h3>
+                    </div>
+                    <div className="shrink-0 text-right">
+                        <p className="text-sm text-stone-600 tabular-nums">
+                            <span className="text-lg font-semibold text-stone-900">{filled}</span>{' '}
+                            of {requirement.headcount}
+                        </p>
+                        <p
+                            className={`text-xs font-medium ${full ? 'text-green-800' : 'text-stone-500'}`}
+                        >
+                            {full ? 'Full' : `${open} open`}
+                        </p>
+                    </div>
                 </div>
-                <p className="mt-1 text-sm text-stone-700 tabular-nums">
+                <div
+                    className="mt-3 h-1.5 overflow-hidden rounded-full bg-stone-100"
+                    role="progressbar"
+                    aria-label={`${requirement.duty_type.name} filled`}
+                    aria-valuemin={0}
+                    aria-valuemax={requirement.headcount}
+                    aria-valuenow={filled}
+                >
+                    <div
+                        className={`h-full rounded-full transition-[width] duration-200 ${full ? 'bg-green-700' : 'bg-maroon-700'}`}
+                        style={{ width: `${percent}%` }}
+                    />
+                </div>
+                <p className="mt-3 flex items-center gap-2 text-sm text-stone-700 tabular-nums">
+                    <ClockIcon className="size-4 shrink-0 text-stone-500" />
                     {shiftText(requirement.shift_starts_at, requirement.shift_ends_at)}
                 </p>
                 {requirement.instructions && (
-                    <p className="mt-2 whitespace-pre-line text-sm text-stone-600">
+                    <p className="mt-3 border-l-2 border-stone-200 pl-3 text-sm text-pretty whitespace-pre-line text-stone-600">
                         {requirement.instructions}
                     </p>
                 )}
             </header>
 
-            {requirement.assignments.length === 0 ? (
-                <div className="flex flex-1 flex-col items-center px-6 py-8 text-center">
-                    <span className="flex size-11 items-center justify-center rounded-control border border-stone-200 text-maroon-700">
-                        <PeopleIcon className="size-5" />
-                    </span>
-                    <p className="mt-3 font-medium text-stone-900">No one assigned yet</p>
-                </div>
-            ) : (
-                <ul className="flex-1 divide-y divide-stone-100">
-                    {requirement.assignments.map((row) => {
-                        const removing = remove.isPending && remove.variables === row.id;
-                        return (
-                            <li
-                                key={row.id}
-                                className="flex items-center gap-4 px-6 py-3 transition-colors hover:bg-stone-50"
+            <ul className="flex-1 divide-y divide-stone-100 border-t border-stone-200">
+                {requirement.assignments.map((row) => {
+                    const removing = remove.isPending && remove.variables === row.id;
+                    return (
+                        <li
+                            key={row.id}
+                            className="flex min-h-14 items-center gap-3 px-6 py-2.5 transition-colors hover:bg-stone-50"
+                        >
+                            <span
+                                className="flex size-9 shrink-0 items-center justify-center rounded-full bg-maroon-50 text-sm font-semibold text-maroon-800"
+                                aria-hidden="true"
                             >
-                                <span
-                                    className="flex size-9 shrink-0 items-center justify-center rounded-full bg-maroon-50 text-sm font-semibold text-maroon-800"
-                                    aria-hidden="true"
+                                {initials(row.person.name)}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                                <p className="truncate font-medium text-stone-900">
+                                    {row.person.name}
+                                </p>
+                                <p className="truncate text-sm text-stone-500">
+                                    {row.person.email}
+                                </p>
+                            </div>
+                            {editable && (
+                                <Button
+                                    size="md"
+                                    variant="ghost"
+                                    loading={removing}
+                                    onClick={() => {
+                                        setError(null);
+                                        remove.mutate(row.id);
+                                    }}
+                                    aria-label={`Remove ${row.person.name}`}
                                 >
-                                    {initials(row.person.name)}
-                                </span>
-                                <div className="min-w-0 flex-1">
-                                    <p className="truncate font-medium text-stone-900">
-                                        {row.person.name}
-                                    </p>
-                                    <p className="truncate text-sm text-stone-500">
-                                        {row.person.email}
-                                    </p>
-                                </div>
-                                {editable && (
-                                    <Button
-                                        size="md"
-                                        variant="secondary"
-                                        loading={removing}
-                                        onClick={() => {
-                                            setError(null);
-                                            remove.mutate(row.id);
-                                        }}
-                                        aria-label={`Remove ${row.person.name}`}
-                                    >
-                                        {removing ? 'Removing...' : 'Remove'}
-                                    </Button>
-                                )}
-                            </li>
-                        );
-                    })}
-                </ul>
-            )}
+                                    {removing ? 'Removing...' : 'Remove'}
+                                </Button>
+                            )}
+                        </li>
+                    );
+                })}
+                {open > 0 && (
+                    <li className="flex min-h-14 items-center gap-3 px-6 py-2.5 text-sm text-stone-500">
+                        <span
+                            className="flex size-9 shrink-0 items-center justify-center rounded-full border border-dashed border-stone-300"
+                            aria-hidden="true"
+                        >
+                            <PeopleIcon className="size-4" />
+                        </span>
+                        {filled === 0
+                            ? `No one assigned yet. ${open} ${open === 1 ? 'spot' : 'spots'} to fill.`
+                            : `${open} more ${open === 1 ? labels.one : labels.plural.toLowerCase()} needed.`}
+                    </li>
+                )}
+            </ul>
 
             {editable && (
                 <form
                     onSubmit={submit}
-                    className="space-y-4 rounded-b-card border-t border-stone-200 bg-stone-50 px-6 py-5"
+                    className="space-y-3 rounded-b-card border-t border-stone-200 bg-stone-50 px-6 py-4"
                 >
-                    <div className="grid items-end gap-3 sm:grid-cols-[1fr_auto_auto]">
+                    <div className="grid items-end gap-3 sm:grid-cols-[1fr_auto]">
                         <SelectField
                             id={`${headingId}-person`}
                             label={`Add a ${labels.one}`}
@@ -249,22 +282,21 @@ function RequirementCard({ requirement, editable }: CardProps) {
                         <Button type="submit" size="md" loading={add.isPending} disabled={!userId}>
                             {add.isPending ? 'Assigning...' : 'Assign'}
                         </Button>
-                        {requirement.assignments.length === 0 && (
-                            <Button
-                                type="button"
-                                size="md"
-                                variant="secondary"
-                                loading={dropDuty.isPending}
-                                onClick={() => {
-                                    setError(null);
-                                    dropDuty.mutate();
-                                }}
-                            >
-                                Delete duty
-                            </Button>
-                        )}
                     </div>
                     {error && <Alert tone="error">{error}</Alert>}
+                    {filled === 0 && (
+                        <button
+                            type="button"
+                            disabled={dropDuty.isPending}
+                            onClick={() => {
+                                setError(null);
+                                dropDuty.mutate();
+                            }}
+                            className="-ml-2 inline-flex min-h-10 items-center rounded-control px-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 disabled:cursor-progress disabled:opacity-60"
+                        >
+                            {dropDuty.isPending ? 'Deleting...' : 'Delete this duty'}
+                        </button>
+                    )}
                 </form>
             )}
         </section>
@@ -274,16 +306,31 @@ function RequirementCard({ requirement, editable }: CardProps) {
 // Local date and time input value to an exact moment for the server.
 const toUtc = (value: string) => (value ? new Date(value).toISOString() : '');
 
-function AddRequirement({ event, taskTypes }: { event: EventSummary; taskTypes: Option[] }) {
+// Exact moment to a local "YYYY-MM-DDTHH:mm" value for a datetime-local input.
+function toLocalInput(iso: string) {
+    const date = new Date(iso);
+    date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+    return date.toISOString().slice(0, 16);
+}
+
+interface AddProps {
+    event: EventSummary;
+    taskTypes: Option[];
+    onClose: () => void;
+}
+
+// The shift starts as the whole event, so the common case is one change or none.
+function AddRequirement({ event, taskTypes, onClose }: AddProps) {
     const queryClient = useQueryClient();
-    const [open, setOpen] = useState(false);
+    const eventStart = toLocalInput(event.starts_at);
+    const eventEnd = toLocalInput(event.ends_at);
     const [errors, setErrors] = useState<Record<string, string[]>>({});
     const [dutyTypeId, setDutyTypeId] = useState('');
     const [role, setRole] = useState('');
     const [team, setTeam] = useState('');
     const [headcount, setHeadcount] = useState('1');
-    const [startsAt, setStartsAt] = useState('');
-    const [endsAt, setEndsAt] = useState('');
+    const [startsAt, setStartsAt] = useState(eventStart);
+    const [endsAt, setEndsAt] = useState(eventEnd);
     const [instructions, setInstructions] = useState('');
     const [formError, setFormError] = useState<string | null>(null);
 
@@ -299,15 +346,8 @@ function AddRequirement({ event, taskTypes }: { event: EventSummary; taskTypes: 
                 instructions,
             }),
         onSuccess: async () => {
-            setOpen(false);
-            setDutyTypeId('');
-            setRole('');
-            setTeam('');
-            setHeadcount('1');
-            setStartsAt('');
-            setEndsAt('');
-            setInstructions('');
             await queryClient.invalidateQueries({ queryKey: ['event', event.id] });
+            onClose();
         },
         onError: (failure) => {
             const body =
@@ -323,6 +363,7 @@ function AddRequirement({ event, taskTypes }: { event: EventSummary; taskTypes: 
     });
 
     const first = (key: string) => errors[key]?.[0] ?? null;
+    const instructionsError = first('instructions');
 
     function submit(e: FormEvent) {
         e.preventDefault();
@@ -331,21 +372,21 @@ function AddRequirement({ event, taskTypes }: { event: EventSummary; taskTypes: 
         save.mutate();
     }
 
-    if (!open) {
-        return (
-            <Button variant="secondary" size="md" onClick={() => setOpen(true)}>
-                Add duty requirement
-            </Button>
-        );
-    }
-
     return (
         <form
             onSubmit={submit}
-            className="space-y-4 rounded-card bg-white p-6 ring-1 ring-stone-200"
+            aria-labelledby="new-requirement-heading"
+            className="mt-6 rounded-card bg-white ring-1 ring-stone-200"
         >
-            <h2 className="text-lg font-semibold text-stone-900">New duty requirement</h2>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="px-6 pt-6">
+                <h3 id="new-requirement-heading" className="text-lg font-semibold text-stone-900">
+                    New duty requirement
+                </h3>
+                <p className="mt-1 text-sm text-pretty text-stone-600">
+                    Say what this event needs. You assign people after you save.
+                </p>
+            </div>
+            <div className={`grid gap-5 px-6 py-6 md:grid-cols-3 ${pickerClass}`}>
                 <SelectField
                     label="Duty type"
                     placeholder="Choose a duty"
@@ -376,11 +417,13 @@ function AddRequirement({ event, taskTypes }: { event: EventSummary; taskTypes: 
                     value={team}
                     onChange={(e) => setTeam(e.target.value)}
                     error={first('team_needed')}
+                    hint="For example, Gate A."
                     maxLength={100}
                 />
                 <TextField
-                    label="Headcount"
+                    label="People needed"
                     type="number"
+                    inputMode="numeric"
                     min={1}
                     value={headcount}
                     onChange={(e) => setHeadcount(e.target.value)}
@@ -391,6 +434,8 @@ function AddRequirement({ event, taskTypes }: { event: EventSummary; taskTypes: 
                     label="Shift starts"
                     type="datetime-local"
                     value={startsAt}
+                    min={eventStart}
+                    max={eventEnd}
                     onChange={(e) => setStartsAt(e.target.value)}
                     error={first('shift_starts_at')}
                     required
@@ -399,37 +444,53 @@ function AddRequirement({ event, taskTypes }: { event: EventSummary; taskTypes: 
                     label="Shift ends"
                     type="datetime-local"
                     value={endsAt}
-                    min={startsAt || undefined}
+                    min={startsAt || eventStart}
+                    max={eventEnd}
                     onChange={(e) => setEndsAt(e.target.value)}
                     error={first('shift_ends_at')}
+                    hint={duration(startsAt, endsAt) ?? 'Must sit inside the event time.'}
                     required
                 />
+                <div className="md:col-span-3">
+                    <label
+                        htmlFor="requirement-instructions"
+                        className="mb-1.5 block text-sm font-medium text-stone-800"
+                    >
+                        Instructions <span className="font-normal text-stone-500">(optional)</span>
+                    </label>
+                    <textarea
+                        id="requirement-instructions"
+                        rows={3}
+                        maxLength={2000}
+                        value={instructions}
+                        onChange={(e) => setInstructions(e.target.value)}
+                        placeholder="Where to report, what to bring, who to call."
+                        aria-invalid={instructionsError ? true : undefined}
+                        aria-describedby={
+                            instructionsError ? 'requirement-instructions-error' : undefined
+                        }
+                        className={`${controlClass(Boolean(instructionsError))} min-h-24 resize-y py-3 leading-relaxed`}
+                    />
+                    {instructionsError && (
+                        <p
+                            id="requirement-instructions-error"
+                            className="mt-1.5 text-sm font-medium text-red-700"
+                        >
+                            {instructionsError}
+                        </p>
+                    )}
+                </div>
             </div>
-            <div>
-                <label
-                    htmlFor="requirement-instructions"
-                    className="mb-1.5 block text-sm font-medium text-stone-800"
-                >
-                    Instructions (optional)
-                </label>
-                <textarea
-                    id="requirement-instructions"
-                    rows={3}
-                    maxLength={2000}
-                    value={instructions}
-                    onChange={(e) => setInstructions(e.target.value)}
-                    className="block w-full rounded-control border border-stone-300 bg-white px-3.5 py-2 text-base text-stone-900 hover:border-stone-400 focus:border-maroon-700 focus:ring-3 focus:ring-maroon-700/15 focus:outline-none"
-                />
-            </div>
-            <p className="text-sm text-stone-600">The shift must sit inside the event time.</p>
-            {formError && <Alert tone="error">{formError}</Alert>}
-            <div className="flex gap-3">
-                <Button type="submit" size="md" loading={save.isPending}>
-                    {save.isPending ? 'Saving...' : 'Save duty'}
-                </Button>
-                <Button type="button" variant="secondary" size="md" onClick={() => setOpen(false)}>
-                    Cancel
-                </Button>
+            <div className="space-y-4 rounded-b-card border-t border-stone-200 bg-stone-50 px-6 py-4">
+                {formError && <Alert tone="error">{formError}</Alert>}
+                <div className="flex flex-wrap items-center justify-end gap-3">
+                    <Button type="button" variant="secondary" size="md" onClick={onClose}>
+                        Cancel
+                    </Button>
+                    <Button type="submit" size="md" loading={save.isPending}>
+                        {save.isPending ? 'Saving...' : 'Save duty'}
+                    </Button>
+                </div>
             </div>
         </form>
     );
@@ -449,10 +510,16 @@ function Skeleton() {
                 <div className="h-4 w-36 animate-pulse rounded bg-stone-200" />
                 <div className="h-4 w-56 animate-pulse rounded bg-stone-200" />
             </div>
-            <div className="mt-8 grid gap-6 xl:grid-cols-2" aria-hidden="true">
+            <div className="mt-10 border-b border-stone-200 pb-4" aria-hidden="true">
+                <div className="h-5 w-44 animate-pulse rounded bg-stone-200" />
+                <div className="mt-2 h-4 w-64 animate-pulse rounded bg-stone-200" />
+            </div>
+            <div className="mt-6 grid gap-6 xl:grid-cols-2" aria-hidden="true">
                 {[0, 1].map((card) => (
                     <div key={card} className="rounded-card bg-white p-6 ring-1 ring-stone-200">
-                        <div className="h-5 w-28 animate-pulse rounded bg-stone-200" />
+                        <div className="h-3 w-20 animate-pulse rounded bg-stone-200" />
+                        <div className="mt-2 h-5 w-40 animate-pulse rounded bg-stone-200" />
+                        <div className="mt-4 h-1.5 animate-pulse rounded-full bg-stone-200" />
                         <div className="mt-6 space-y-4">
                             <div className="h-9 animate-pulse rounded bg-stone-200" />
                             <div className="h-9 animate-pulse rounded bg-stone-200" />
@@ -490,29 +557,31 @@ function EventActions({ event }: { event: EventSummary }) {
     if (event.status !== 'draft' && event.status !== 'published') return null;
 
     return (
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-            {event.status === 'draft' && (
+        <div className="flex max-w-sm flex-col items-start gap-3 lg:items-end">
+            <div className="flex flex-wrap items-center gap-3 lg:justify-end">
                 <Button
                     size="md"
-                    loading={publish.isPending}
+                    variant="secondary"
                     onClick={() => {
                         setError(null);
-                        publish.mutate();
+                        setConfirmCancel(true);
                     }}
                 >
-                    {publish.isPending ? 'Publishing...' : 'Publish event'}
+                    Cancel event
                 </Button>
-            )}
-            <Button
-                size="md"
-                variant="secondary"
-                onClick={() => {
-                    setError(null);
-                    setConfirmCancel(true);
-                }}
-            >
-                Cancel event
-            </Button>
+                {event.status === 'draft' && (
+                    <Button
+                        size="md"
+                        loading={publish.isPending}
+                        onClick={() => {
+                            setError(null);
+                            publish.mutate();
+                        }}
+                    >
+                        {publish.isPending ? 'Publishing...' : 'Publish event'}
+                    </Button>
+                )}
+            </div>
             {error && <Alert tone="error">{error}</Alert>}
             <ConfirmDialog
                 open={confirmCancel}
@@ -520,6 +589,7 @@ function EventActions({ event }: { event: EventSummary }) {
                 description="Assigned people will see the event as cancelled. This cannot be undone."
                 confirmLabel="Cancel event"
                 cancelLabel="Keep event"
+                tone="danger"
                 loading={cancel.isPending}
                 loadingLabel="Cancelling..."
                 onConfirm={() => cancel.mutate()}
@@ -529,8 +599,25 @@ function EventActions({ event }: { event: EventSummary }) {
     );
 }
 
+function NoDuties({ editable }: { editable: boolean }) {
+    return (
+        <div className="mt-6 flex flex-col items-center rounded-card bg-white px-6 py-12 text-center ring-1 ring-stone-200">
+            <span className="flex size-11 items-center justify-center rounded-control border border-stone-200 text-maroon-700">
+                <ClipboardIcon className="size-5" />
+            </span>
+            <p className="mt-4 font-semibold text-stone-900">No duties yet</p>
+            <p className="mt-1 max-w-sm text-sm text-pretty text-stone-600">
+                {editable
+                    ? 'Add what this event needs, then assign marshals and volunteers to each duty.'
+                    : 'This event has no duty requirements.'}
+            </p>
+        </div>
+    );
+}
+
 export function EventDetail() {
     const eventId = Number(useParams().id);
+    const [adding, setAdding] = useState(false);
 
     const event = useQuery({ queryKey: ['event', eventId], queryFn: () => getEvent(eventId) });
     const lookups = useQuery({ queryKey: ['event-lookups'], queryFn: getLookups });
@@ -568,78 +655,116 @@ export function EventDetail() {
     const status = statuses[data.status];
     const when = schedule(data.starts_at, data.ends_at);
     const editable = data.status === 'draft' || data.status === 'published';
+    const needed = requirements.reduce((sum, r) => sum + r.headcount, 0);
+    const assigned = requirements.reduce(
+        (sum, r) => sum + Math.min(r.assignments.length, r.headcount),
+        0,
+    );
 
     return (
         <div className="mx-auto max-w-[1440px]">
             <BackLink />
 
-            <header className="mt-4">
-                <div className="brand-stripe h-1 w-12 rounded-full" aria-hidden="true" />
-                <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
-                    <h1 className="text-2xl font-semibold tracking-tight text-balance text-stone-900">
-                        {data.title}
-                    </h1>
-                    <span className={`${chipClass} ${status.chip}`}>{status.label}</span>
+            <header className="mt-4 flex flex-col gap-x-10 gap-y-5 lg:flex-row lg:items-start lg:justify-between">
+                <div className="min-w-0 flex-1">
+                    <div className="brand-stripe h-1 w-12 rounded-full" aria-hidden="true" />
+                    <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+                        <h1 className="text-2xl font-semibold tracking-tight text-balance text-stone-900">
+                            {data.title}
+                        </h1>
+                        <span className={`${chipClass} ${status.chip}`}>{status.label}</span>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
+                        <Meta icon={<TagIcon className="size-4" />}>{data.event_type.label}</Meta>
+                        <Meta icon={<PinIcon className="size-4" />}>
+                            {data.location?.name ?? 'No location set'}
+                        </Meta>
+                        <Meta icon={<CalendarIcon className="size-4" />}>
+                            <span className="tabular-nums">
+                                {when.day}, {when.time}
+                            </span>
+                        </Meta>
+                    </div>
+                    {data.description && (
+                        <p className="mt-4 max-w-3xl text-pretty whitespace-pre-line text-stone-700">
+                            {data.description}
+                        </p>
+                    )}
                 </div>
-                <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
-                    <Meta icon={<TagIcon className="size-4" />}>{data.event_type.label}</Meta>
-                    <Meta icon={<PinIcon className="size-4" />}>
-                        {data.location?.name ?? 'No location set'}
-                    </Meta>
-                    <Meta icon={<CalendarIcon className="size-4" />}>
-                        <span className="tabular-nums">
-                            {when.day}, {when.time}
-                        </span>
-                    </Meta>
-                </div>
-                {data.description && (
-                    <p className="mt-4 max-w-3xl text-pretty whitespace-pre-line text-stone-700">
-                        {data.description}
-                    </p>
-                )}
                 <EventActions event={data} />
             </header>
 
-            {lookups.isError && (
-                <div className="mt-6 flex max-w-2xl flex-wrap items-start gap-3">
-                    <div className="flex-1">
-                        <Alert tone="error">
-                            The duty types did not load, so you cannot add duties yet.
-                        </Alert>
+            {data.status === 'draft' && (
+                <div className="mt-6 max-w-3xl">
+                    <Alert tone="info">
+                        This event is a draft. Assigned people see their duties after you publish
+                        it.
+                    </Alert>
+                </div>
+            )}
+
+            <section aria-labelledby="duties-heading" className="mt-10">
+                <div className="flex flex-wrap items-end justify-between gap-4 border-b border-stone-200 pb-4">
+                    <div>
+                        <h2 id="duties-heading" className="text-lg font-semibold text-stone-900">
+                            Duty requirements
+                        </h2>
+                        <p className="mt-1 text-sm text-stone-600 tabular-nums">
+                            {requirements.length === 0
+                                ? 'What this event needs, and who fills it.'
+                                : `${requirements.length} ${requirements.length === 1 ? 'duty' : 'duties'}, ${assigned} of ${needed} people assigned.`}
+                        </p>
                     </div>
-                    <Button
-                        variant="secondary"
-                        size="md"
-                        loading={lookups.isFetching}
-                        onClick={() => void lookups.refetch()}
-                    >
-                        Retry
-                    </Button>
+                    {editable && lookups.data && !adding && (
+                        <Button variant="secondary" size="md" onClick={() => setAdding(true)}>
+                            <PlusIcon className="size-4" />
+                            Add duty requirement
+                        </Button>
+                    )}
                 </div>
-            )}
 
-            <h2 className="mt-8 text-lg font-semibold text-stone-900">Duty requirements</h2>
-            {requirements.length === 0 ? (
-                <p className="mt-2 text-sm text-stone-600">
-                    No duties yet. Add what this event needs, then assign people to it.
-                </p>
-            ) : (
-                <div className="mt-4 grid gap-6 xl:grid-cols-2">
-                    {requirements.map((requirement) => (
-                        <RequirementCard
-                            key={requirement.id}
-                            requirement={requirement}
-                            editable={editable}
+                {lookups.isError && editable && (
+                    <div className="mt-6 flex max-w-2xl flex-wrap items-start gap-3">
+                        <div className="flex-1">
+                            <Alert tone="error">
+                                The duty types did not load, so you cannot add duties yet.
+                            </Alert>
+                        </div>
+                        <Button
+                            variant="secondary"
+                            size="md"
+                            loading={lookups.isFetching}
+                            onClick={() => void lookups.refetch()}
+                        >
+                            Retry
+                        </Button>
+                    </div>
+                )}
+
+                {adding && editable && lookups.data && (
+                    <div className="max-w-5xl">
+                        <AddRequirement
+                            event={data}
+                            taskTypes={lookups.data.task_types}
+                            onClose={() => setAdding(false)}
                         />
-                    ))}
-                </div>
-            )}
+                    </div>
+                )}
 
-            {editable && lookups.data && (
-                <div className="mt-6 max-w-5xl">
-                    <AddRequirement event={data} taskTypes={lookups.data.task_types} />
-                </div>
-            )}
+                {requirements.length === 0 ? (
+                    !adding && <NoDuties editable={editable} />
+                ) : (
+                    <div className="mt-6 grid items-start gap-6 xl:grid-cols-2">
+                        {requirements.map((requirement) => (
+                            <RequirementCard
+                                key={requirement.id}
+                                requirement={requirement}
+                                editable={editable}
+                            />
+                        ))}
+                    </div>
+                )}
+            </section>
         </div>
     );
 }
