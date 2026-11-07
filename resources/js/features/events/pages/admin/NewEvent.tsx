@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { createEvent, getLookups } from '@/features/events/api';
+import { ChevronIcon } from '@/features/events/components/icons';
+import { SelectField, SelectOption } from '@/features/events/components/SelectField';
 import { ApiError } from '@/shared/api/client';
 import { Alert } from '@/shared/ui/Alert';
 import { Button } from '@/shared/ui/Button';
@@ -12,7 +14,7 @@ type Errors = Record<string, string[]>;
 
 const DESCRIPTION_MAX = 5000;
 
-// Same look as TextField's input, for the native textarea and select.
+// Same look as TextField's input, for the native textarea.
 function controlClass(error: boolean) {
     return `block w-full rounded-control border bg-white px-3.5 text-base text-stone-900 transition-colors placeholder:text-stone-400 focus:border-maroon-700 focus:ring-3 focus:ring-maroon-700/15 focus:outline-none disabled:cursor-not-allowed disabled:bg-stone-50 disabled:text-stone-500 ${error ? 'border-red-600' : 'border-stone-300 hover:border-stone-400'}`;
 }
@@ -64,23 +66,6 @@ function Section({
     );
 }
 
-function ChevronIcon({ className }: { className: string }) {
-    return (
-        <svg
-            viewBox="0 0 24 24"
-            className={className}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.8}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-        >
-            <path d="m6 9 6 6 6-6" />
-        </svg>
-    );
-}
-
 export function NewEvent() {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
@@ -93,7 +78,7 @@ export function NewEvent() {
     const [errors, setErrors] = useState<Errors>({});
     const [failure, setFailure] = useState<string | null>(null);
 
-    const locations = useQuery({ queryKey: ['event-locations'], queryFn: getLookups });
+    const lookups = useQuery({ queryKey: ['event-lookups'], queryFn: getLookups });
 
     const save = useMutation({
         mutationFn: createEvent,
@@ -129,11 +114,9 @@ export function NewEvent() {
     const first = (key: string) => errors[key]?.[0] ?? null;
     const hasErrors = Object.keys(errors).length > 0;
     const descriptionError = first('description');
-    const typeError = first('event_type');
-    const locationError = first('campus_location_id');
-    const locationPlaceholder = locations.isPending
+    const locationPlaceholder = lookups.isPending
         ? 'Loading locations...'
-        : locations.isError
+        : lookups.isError
           ? 'Locations did not load'
           : 'Choose a location';
 
@@ -163,48 +146,32 @@ export function NewEvent() {
                 className="mt-8 divide-y divide-stone-200 rounded-card bg-white ring-1 ring-stone-200"
             >
                 <Section title="Details" intro="The name and notes personnel will see.">
-                    <TextField
-                        label="Title"
-                        placeholder="For example, University Foundation Day"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        error={first('title')}
-                        maxLength={255}
-                        required
-                    />
-
-                    <div>
-                        <label
-                            htmlFor="event-type"
-                            className="mb-1.5 block text-sm font-medium text-stone-800"
+                    <div className="grid gap-5 sm:grid-cols-3">
+                        <TextField
+                            className="sm:col-span-2"
+                            label="Title"
+                            placeholder="For example, University Foundation Day"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            error={first('title')}
+                            maxLength={255}
+                            required
+                        />
+                        <SelectField
+                            label="Event type"
+                            placeholder={lookups.isPending ? 'Loading...' : 'Choose a type'}
+                            value={eventType}
+                            onChange={(e) => setEventType(e.target.value)}
+                            disabled={!lookups.isSuccess}
+                            error={first('event_type')}
+                            required
                         >
-                            Event type
-                        </label>
-                        <div className="relative">
-                            <select
-                                id="event-type"
-                                value={eventType}
-                                onChange={(e) => setEventType(e.target.value)}
-                                disabled={!locations.isSuccess}
-                                aria-invalid={typeError ? true : undefined}
-                                aria-describedby={typeError ? 'event-type-error' : undefined}
-                                className={`${controlClass(Boolean(typeError))} min-h-12 cursor-pointer appearance-none pr-11 ${eventType ? '' : 'text-stone-500'}`}
-                                required
-                            >
-                                <option value="">Choose a type</option>
-                                {locations.data?.event_types.map((type) => (
-                                    <option
-                                        key={type.value}
-                                        value={type.value}
-                                        className="text-stone-900"
-                                    >
-                                        {type.label}
-                                    </option>
-                                ))}
-                            </select>
-                            <ChevronIcon className="pointer-events-none absolute top-1/2 right-3.5 size-5 -translate-y-1/2 text-stone-500" />
-                        </div>
-                        {typeError && <FieldError id="event-type-error">{typeError}</FieldError>}
+                            {lookups.data?.event_types.map((type) => (
+                                <SelectOption key={type.value} value={type.value}>
+                                    {type.label}
+                                </SelectOption>
+                            ))}
+                        </SelectField>
                     </div>
 
                     <div>
@@ -244,51 +211,33 @@ export function NewEvent() {
 
                 <Section title="Where and when" intro="Pick the campus spot and the duty window.">
                     <div>
-                        <label
-                            htmlFor="event-location"
-                            className="mb-1.5 block text-sm font-medium text-stone-800"
+                        <SelectField
+                            label="Campus location"
+                            placeholder={locationPlaceholder}
+                            value={locationId}
+                            onChange={(e) => setLocationId(e.target.value)}
+                            disabled={!lookups.isSuccess}
+                            error={first('campus_location_id')}
+                            required
                         >
-                            Campus location
-                        </label>
-                        <div className="relative">
-                            <select
-                                id="event-location"
-                                value={locationId}
-                                onChange={(e) => setLocationId(e.target.value)}
-                                disabled={!locations.isSuccess}
-                                aria-invalid={locationError ? true : undefined}
-                                aria-describedby={
-                                    locationError ? 'event-location-error' : undefined
-                                }
-                                className={`${controlClass(Boolean(locationError))} min-h-12 cursor-pointer appearance-none pr-11 ${locationId ? '' : 'text-stone-500'}`}
-                                required
-                            >
-                                <option value="">{locationPlaceholder}</option>
-                                {locations.data?.locations.map((location) => (
-                                    <option
-                                        key={location.id}
-                                        value={location.id}
-                                        className="text-stone-900"
-                                    >
-                                        {location.name}
-                                    </option>
-                                ))}
-                            </select>
-                            <ChevronIcon className="pointer-events-none absolute top-1/2 right-3.5 size-5 -translate-y-1/2 text-stone-500" />
-                        </div>
-                        {locationError && (
-                            <FieldError id="event-location-error">{locationError}</FieldError>
-                        )}
-                        {locations.isError && (
-                            <div className="mt-3 flex flex-wrap items-center gap-3">
-                                <Alert tone="error">The locations did not load.</Alert>
+                            {lookups.data?.locations.map((location) => (
+                                <SelectOption key={location.id} value={location.id}>
+                                    {location.name}
+                                </SelectOption>
+                            ))}
+                        </SelectField>
+                        {lookups.isError && (
+                            <div className="mt-3 space-y-3">
+                                <Alert tone="error">
+                                    The locations and event types did not load.
+                                </Alert>
                                 <Button
                                     variant="secondary"
                                     size="md"
-                                    loading={locations.isFetching}
-                                    onClick={() => void locations.refetch()}
+                                    loading={lookups.isFetching}
+                                    onClick={() => void lookups.refetch()}
                                 >
-                                    {locations.isFetching ? 'Retrying...' : 'Retry'}
+                                    {lookups.isFetching ? 'Retrying...' : 'Retry'}
                                 </Button>
                             </div>
                         )}
