@@ -6,9 +6,12 @@ namespace Tests;
 
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Testing\TestResponse;
+use Tests\Support\FakeMailSender;
 
 abstract class TestCase extends BaseTestCase
 {
+    public FakeMailSender $mail;
+
     /**
      * The access and refresh cookies set by a response, keyed by cookie name.
      *

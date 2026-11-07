@@ -22,6 +22,14 @@ beforeEach(function () {
     $this->app->instance(MailSender::class, $this->mail);
 });
 
+function resetTokenFor(User $user): string
+{
+    /** @var PasswordBroker $broker */
+    $broker = Password::broker();
+
+    return $broker->createToken($user);
+}
+
 function resetWith(array $overrides = [])
 {
     return test()->postJson('/api/reset-password', array_merge([
@@ -131,7 +139,7 @@ it('allows 3 forgot password requests per 10 minutes per IP', function () {
 it('sets a new password, signs out every device and writes an audit row', function () {
     $user = User::factory()->create();
     $oldPhone = loginCookies($user);
-    $token = Password::broker()->createToken($user);
+    $token = resetTokenFor($user);
 
     $this->travel(1)->seconds();
     resetWith(['token' => $token, 'email' => $user->email])->assertOk();
@@ -150,7 +158,7 @@ it('sets a new password, signs out every device and writes an audit row', functi
 
 it('accepts a link only once', function () {
     $user = User::factory()->create();
-    $token = Password::broker()->createToken($user);
+    $token = resetTokenFor($user);
 
     resetWith(['token' => $token, 'email' => $user->email])->assertOk();
     resetWith(['token' => $token, 'email' => $user->email])
@@ -161,7 +169,7 @@ it('accepts a link only once', function () {
 it('rejects a wrong token, an unknown email and a disabled account the same way', function () {
     $user = User::factory()->create();
     $disabled = User::factory()->disabled()->create();
-    $disabledToken = Password::broker()->createToken($disabled);
+    $disabledToken = resetTokenFor($disabled);
 
     resetWith(['token' => 'wrong', 'email' => $user->email])->assertStatus(422)->assertJsonPath('code', 'invalid_reset_link');
     resetWith(['token' => 'wrong', 'email' => 'nobody@example.test'])->assertStatus(422)->assertJsonPath('code', 'invalid_reset_link');
@@ -173,7 +181,7 @@ it('rejects a wrong token, an unknown email and a disabled account the same way'
 
 it('rejects a link older than 60 minutes', function () {
     $user = User::factory()->create();
-    $token = Password::broker()->createToken($user);
+    $token = resetTokenFor($user);
 
     $this->travel(61)->minutes();
 
@@ -182,7 +190,7 @@ it('rejects a link older than 60 minutes', function () {
 
 it('needs a password of at least 12 characters, typed twice', function () {
     $user = User::factory()->create();
-    $token = Password::broker()->createToken($user);
+    $token = resetTokenFor($user);
 
     resetWith(['token' => $token, 'email' => $user->email, 'password' => 'short-pass1', 'password_confirmation' => 'short-pass1'])
         ->assertStatus(422)
