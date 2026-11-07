@@ -57,12 +57,16 @@ export interface Assignment {
     person: { id: number; name: string; email: string };
     role: 'marshal' | 'volunteer';
     task_type: Option;
+    status: 'assigned' | 'acknowledged' | 'on_duty' | 'completed' | 'cancelled' | 'no_show';
+    acknowledged_at: string | null;
 }
 
 export interface Candidate {
     id: number;
     name: string;
     role: 'marshal' | 'volunteer';
+    // Title of an event whose shift overlaps this one, when there is one.
+    conflict: string | null;
 }
 
 export async function getLookups(): Promise<Lookups> {
@@ -139,6 +143,8 @@ export async function cancelEvent(id: number): Promise<void> {
 
 export interface MyAssignment {
     id: number;
+    status: Assignment['status'];
+    acknowledged_at: string | null;
     event: { id: number; title: string; status: string; location: string | null };
     duty_type: string | null;
     team_needed: string | null;
@@ -149,5 +155,66 @@ export interface MyAssignment {
 
 export async function listMyAssignments(): Promise<MyAssignment[]> {
     const body = await api<{ data: MyAssignment[] }>('/api/me/assignments');
+    return body.data;
+}
+
+export async function updateEvent(id: number, input: NewEvent): Promise<EventSummary> {
+    const body = await api<{ data: EventSummary }>(`/api/events/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(input),
+    });
+    return body.data;
+}
+
+export async function cancelAssignment(id: number, reason: string): Promise<void> {
+    await api(`/api/assignments/${id}/cancel`, { method: 'POST', body: JSON.stringify({ reason }) });
+}
+
+export async function markNoShow(id: number): Promise<void> {
+    await api(`/api/assignments/${id}/no-show`, { method: 'POST' });
+}
+
+export async function acknowledgeAssignment(id: number): Promise<void> {
+    await api(`/api/me/assignments/${id}/acknowledge`, { method: 'POST' });
+}
+
+export interface DashboardRow {
+    id: number;
+    person: string;
+    event: { id: number; title: string };
+    starts_at: string | null;
+}
+
+export interface Dashboard {
+    today_events: {
+        id: number;
+        title: string;
+        location: string | null;
+        starts_at: string;
+        ends_at: string;
+        people_count: number;
+    }[];
+    unacknowledged: DashboardRow[];
+    not_on_duty: DashboardRow[];
+}
+
+export async function getDashboard(): Promise<Dashboard> {
+    const body = await api<{ data: Dashboard }>('/api/dashboard');
+    return body.data;
+}
+
+export interface EventNotice {
+    id: number;
+    title: string;
+    description: string | null;
+    event_type: string;
+    location: string | null;
+    campus_wide: boolean;
+    starts_at: string;
+    ends_at: string;
+}
+
+export async function listEventNotices(): Promise<EventNotice[]> {
+    const body = await api<{ data: EventNotice[] }>('/api/me/event-notices');
     return body.data;
 }

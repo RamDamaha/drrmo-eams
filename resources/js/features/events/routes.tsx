@@ -10,5 +10,6 @@ export const myDutiesRoute: RouteObject = { index: true, element: <MyAssignments
 export const adminEventRoutes: RouteObject[] = [
     { path: 'events', element: <Events /> },
     { path: 'events/new', element: <NewEvent /> },
+    { path: 'events/:id/edit', element: <NewEvent /> },
     { path: 'events/:id', element: <EventDetail /> },
 ];

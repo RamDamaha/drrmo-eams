@@ -1,8 +1,8 @@
 // A-Event form (SCREENS.md). Admin creates an event: title, campus location, start and end.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router';
-import { createEvent, getLookups } from '@/features/events/api';
+import { Link, useNavigate, useParams } from 'react-router';
+import { createEvent, getEvent, getLookups, updateEvent } from '@/features/events/api';
 import { controlClass, duration, pickerClass } from '@/features/events/components/fields';
 import { ChevronIcon } from '@/features/events/components/icons';
 import { SelectField, SelectOption } from '@/features/events/components/SelectField';
@@ -14,6 +14,13 @@ import { TextField } from '@/shared/ui/TextField';
 type Errors = Record<string, string[]>;
 
 const DESCRIPTION_MAX = 5000;
+
+// An ISO moment as the value a datetime-local field expects, in the browser's time zone.
+function toLocalInput(iso: string): string {
+    const date = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
 
 function FieldError({ id, children }: { id: string; children: ReactNode }) {
     return (
@@ -45,6 +52,7 @@ function Section({
 
 export function NewEvent() {
     const navigate = useNavigate();
+    const editingId = Number(useParams().id) || null;
     const queryClient = useQueryClient();
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -56,12 +64,29 @@ export function NewEvent() {
     const [failure, setFailure] = useState<string | null>(null);
 
     const lookups = useQuery({ queryKey: ['event-lookups'], queryFn: getLookups });
+    const existing = useQuery({
+        queryKey: ['event', editingId],
+        queryFn: () => getEvent(editingId ?? 0),
+        enabled: editingId !== null,
+    });
+    const [filled, setFilled] = useState(false);
+    if (existing.data && !filled) {
+        setFilled(true);
+        setTitle(existing.data.title);
+        setDescription(existing.data.description ?? '');
+        setEventType(existing.data.event_type.value);
+        setLocationId(String(existing.data.location?.id ?? ''));
+        setStartsAt(toLocalInput(existing.data.starts_at));
+        setEndsAt(toLocalInput(existing.data.ends_at));
+    }
 
     const save = useMutation({
-        mutationFn: createEvent,
+        mutationFn: (input: Parameters<typeof createEvent>[0]) =>
+            editingId ? updateEvent(editingId, input) : createEvent(input),
         onSuccess: async () => {
             await queryClient.invalidateQueries({ queryKey: ['events'] });
-            await navigate('/admin/events');
+            await queryClient.invalidateQueries({ queryKey: ['event'] });
+            await navigate(editingId ? `/admin/events/${editingId}` : '/admin/events');
         },
         onError: (error) => {
             if (error instanceof ApiError && error.status === 422) {
@@ -110,10 +135,12 @@ export function NewEvent() {
             <header className="mt-4">
                 <div className="brand-stripe h-1 w-12 rounded-full" aria-hidden="true" />
                 <h1 className="mt-4 text-2xl font-semibold tracking-tight text-stone-900">
-                    New event
+                    {editingId ? 'Edit event' : 'New event'}
                 </h1>
                 <p className="mt-1 text-pretty text-stone-600">
-                    The event is saved as a draft. You set the duty requirements next.
+                    {editingId
+                        ? 'Duty shifts must stay inside the new times.'
+                        : 'The event is saved as a draft. You set the duty requirements next.'}
                 </p>
             </header>
 
@@ -251,7 +278,7 @@ export function NewEvent() {
                     )}
                     <div className="flex flex-wrap items-center justify-end gap-3">
                         <Link
-                            to="/admin/events"
+                            to={editingId ? `/admin/events/${editingId}` : '/admin/events'}
                             className="inline-flex min-h-10 items-center rounded-control border border-stone-300 bg-white px-4 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-50 active:bg-stone-100"
                         >
                             Cancel

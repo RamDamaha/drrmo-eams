@@ -11,8 +11,11 @@ import {
     getLookups,
     listCandidates,
     publishEvent,
+    cancelAssignment,
+    markNoShow,
     removeAssignment,
     removeRequirement,
+    type Assignment,
     type EventSummary,
     type Option,
     type Requirement,
@@ -92,10 +95,14 @@ function dutyName(requirement: Requirement) {
         : requirement.duty_type.name;
 }
 
-const failMessage = (failure: unknown) =>
-    failure instanceof ApiError && failure.status === 422
-        ? 'That did not work. The duty may be full or the person already assigned. Refresh and try again.'
-        : 'That did not work. Check your connection and try again.';
+function failMessage(failure: unknown): string {
+    if (failure instanceof ApiError && failure.status === 422) {
+        const body = failure.body as { message?: string } | null;
+        return body?.message ?? 'That did not work. Refresh and try again.';
+    }
+    if (failure instanceof Error && !(failure instanceof ApiError)) return failure.message;
+    return 'That did not work. Check your connection and try again.';
+}
 
 function OpenSpot() {
     return (
@@ -128,7 +135,8 @@ function DutyGroup({
 }) {
     const queryClient = useQueryClient();
     const labels = roleLabels[requirement.role];
-    const filled = requirement.assignments.length;
+    const filled = requirement.assignments.filter((a) => a.status !== 'no_show').length;
+    const acknowledged = requirement.assignments.filter((a) => a.status === 'acknowledged').length;
     const open = Math.max(requirement.headcount - filled, 0);
 
     const refresh = () =>
@@ -137,10 +145,21 @@ function DutyGroup({
             queryClient.invalidateQueries({ queryKey: ['requirement-candidates'] }),
         ]);
     const remove = useMutation({
-        mutationFn: removeAssignment,
+        mutationFn: async (row: Assignment) => {
+            if (row.status === 'assigned') return removeAssignment(row.id);
+            const reason = window.prompt(`Why is ${row.person.name} being taken off this duty?`);
+            if (!reason || reason.trim().length < 5) throw new Error('A reason of at least 5 characters is needed.');
+            return cancelAssignment(row.id, reason.trim());
+        },
         onSuccess: refresh,
         onError: (failure) => onError(failMessage(failure)),
     });
+    const noShow = useMutation({
+        mutationFn: markNoShow,
+        onSuccess: refresh,
+        onError: (failure) => onError(failMessage(failure)),
+    });
+    const started = new Date(requirement.shift_starts_at).getTime() <= Date.now();
     const dropDuty = useMutation({
         mutationFn: () => removeRequirement(requirement.id),
         onSuccess: refresh,
@@ -194,11 +213,16 @@ function DutyGroup({
                             {requirement.headcount}
                         </p>
                     )}
+                    {filled > 0 && (
+                        <p className="text-xs text-stone-500 tabular-nums">
+                            {acknowledged} acknowledged
+                        </p>
+                    )}
                 </div>
             </div>
             <ul className="divide-y divide-stone-100">
                 {requirement.assignments.map((row) => {
-                    const removing = remove.isPending && remove.variables === row.id;
+                    const removing = remove.isPending && remove.variables?.id === row.id;
                     return (
                         <li
                             key={row.id}
@@ -213,19 +237,42 @@ function DutyGroup({
                             <div className="min-w-0 flex-1">
                                 <p className="truncate font-medium text-stone-900">
                                     {row.person.name}
+                                    {row.status === 'acknowledged' && (
+                                        <span className={`${chipClass} ml-2 bg-green-50 text-green-800 ring-green-200`}>
+                                            Acknowledged
+                                        </span>
+                                    )}
+                                    {row.status === 'no_show' && (
+                                        <span className={`${chipClass} ml-2 bg-red-50 text-red-800 ring-red-200`}>
+                                            No show
+                                        </span>
+                                    )}
                                 </p>
                                 <p className="truncate text-sm text-stone-500">
                                     {row.person.email}
                                 </p>
                             </div>
-                            {editable && (
+                            {editable && started && (row.status === 'assigned' || row.status === 'acknowledged') && (
+                                <Button
+                                    size="md"
+                                    variant="ghost"
+                                    onClick={() => {
+                                        onError(null);
+                                        noShow.mutate(row.id);
+                                    }}
+                                    aria-label={`Mark ${row.person.name} as no show`}
+                                >
+                                    No show
+                                </Button>
+                            )}
+                            {editable && (row.status === 'assigned' || row.status === 'acknowledged') && (
                                 <Button
                                     size="md"
                                     variant="ghost"
                                     loading={removing}
                                     onClick={() => {
                                         onError(null);
-                                        remove.mutate(row.id);
+                                        remove.mutate(row);
                                     }}
                                     aria-label={`Remove ${row.person.name}`}
                                 >
@@ -512,7 +559,7 @@ function PickPeople({ requirement, onDone }: { requirement: Requirement; onDone:
                     <ul className="max-h-72 divide-y divide-stone-100 overflow-y-auto rounded-control ring-1 ring-stone-200">
                         {shown.map((person) => {
                             const checked = chosen.includes(person.id);
-                            const disabled = !checked && full;
+                            const disabled = (!checked && full) || person.conflict !== null;
                             return (
                                 <li key={person.id}>
                                     <label
@@ -534,6 +581,11 @@ function PickPeople({ requirement, onDone }: { requirement: Requirement; onDone:
                                         <span className="min-w-0 truncate font-medium text-stone-900">
                                             {person.name}
                                         </span>
+                                        {person.conflict && (
+                                            <span className={`${chipClass} bg-amber-50 text-amber-800 ring-amber-200`}>
+                                                Busy: {person.conflict}
+                                            </span>
+                                        )}
                                     </label>
                                 </li>
                             );
@@ -966,6 +1018,12 @@ function EventActions({ event }: { event: EventSummary }) {
     return (
         <div className="flex max-w-sm flex-col items-start gap-3 lg:items-end">
             <div className="flex flex-wrap items-center gap-3 lg:justify-end">
+                <Link
+                    to={`/admin/events/${event.id}/edit`}
+                    className="inline-flex min-h-10 items-center rounded-control border border-stone-300 bg-white px-4 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-50"
+                >
+                    Edit event
+                </Link>
                 <Button
                     size="md"
                     variant="secondary"
