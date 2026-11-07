@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Modules\Events\Http\Controllers\AcknowledgeController;
 use App\Modules\Events\Http\Controllers\AssignmentController;
+use App\Modules\Events\Http\Controllers\DashboardController;
 use App\Modules\Events\Http\Controllers\EventController;
+use App\Modules\Events\Http\Controllers\EventNoticeController;
 use App\Modules\Events\Http\Controllers\LookupController;
 use App\Modules\Events\Http\Controllers\MyAssignmentController;
 use App\Modules\Events\Http\Controllers\RequirementController;
@@ -14,6 +17,7 @@ Route::get('/event-lookups', LookupController::class);
 Route::get('/events', [EventController::class, 'index']);
 Route::post('/events', [EventController::class, 'store']);
 Route::get('/events/{event}', [EventController::class, 'show']);
+Route::put('/events/{event}', [EventController::class, 'update']);
 Route::post('/events/{event}/publish', [EventController::class, 'publish']);
 Route::post('/events/{event}/cancel', [EventController::class, 'cancel']);
 Route::post('/events/{event}/requirements', [RequirementController::class, 'store']);
@@ -22,3 +26,9 @@ Route::get('/requirements/{requirement}/candidates', [AssignmentController::clas
 Route::post('/requirements/{requirement}/assignments', [AssignmentController::class, 'store']);
 Route::delete('/assignments/{assignment}', [AssignmentController::class, 'destroy']);
 Route::get('/me/assignments', MyAssignmentController::class);
+Route::post('/me/assignments/{assignment}/acknowledge', AcknowledgeController::class);
+Route::get('/me/event-notices', EventNoticeController::class);
+Route::get('/dashboard', DashboardController::class);
+Route::patch('/assignments/{assignment}', [AssignmentController::class, 'update']);
+Route::post('/assignments/{assignment}/cancel', [AssignmentController::class, 'cancel']);
+Route::post('/assignments/{assignment}/no-show', [AssignmentController::class, 'noShow']);

@@ -43,4 +43,25 @@ class DutyRequirement extends Model
     {
         return $this->hasMany(Assignment::class, 'requirement_id');
     }
+
+    /** Live assignment of this person whose shift overlaps this one, if any. */
+    public function overlapFor(int $userId, ?int $ignoreAssignmentId = null): ?Assignment
+    {
+        return Assignment::query()->live()
+            ->where('user_id', $userId)
+            ->when($ignoreAssignmentId, fn ($q) => $q->where('id', '!=', $ignoreAssignmentId))
+            ->whereHas('requirement', fn ($q) => $q->where('id', '!=', $this->id)
+                ->where('shift_starts_at', '<', $this->shift_ends_at)
+                ->where('shift_ends_at', '>', $this->shift_starts_at))
+            ->with('event:id,title')
+            ->first();
+    }
+
+    /** True when every place on this duty is taken by a live assignment. */
+    public function isFull(?int $ignoreAssignmentId = null): bool
+    {
+        return $this->assignments()->live()
+            ->when($ignoreAssignmentId, fn ($q) => $q->where('id', '!=', $ignoreAssignmentId))
+            ->count() >= $this->headcount;
+    }
 }

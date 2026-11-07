@@ -19,6 +19,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property EventStatus $status
+ * @property EventType $event_type
+ * @property int|null $people_count
  * @property CarbonImmutable|Carbon $starts_at
  * @property CarbonImmutable|Carbon $ends_at
  */

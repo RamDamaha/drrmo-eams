@@ -27,6 +27,8 @@ class MyAssignmentController
 
         return response()->json(['data' => $rows->map(fn (Assignment $a) => [
             'id' => $a->id,
+            'status' => $a->status->value,
+            'acknowledged_at' => $a->acknowledged_at?->toIso8601String(),
             'event' => [
                 'id' => $a->event->id,
                 'title' => $a->event->title,

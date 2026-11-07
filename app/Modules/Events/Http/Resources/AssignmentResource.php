@@ -19,6 +19,9 @@ class AssignmentResource extends JsonResource
             'person' => ['id' => $this->user->id, 'name' => $this->user->name, 'email' => $this->user->email],
             'role' => $this->user->role?->code,
             'task_type' => ['id' => $this->dutyType->id, 'name' => $this->dutyType->name],
+            'status' => $this->status->value,
+            'acknowledged_at' => $this->acknowledged_at?->toIso8601String(),
+            'override_reason' => $this->override_reason,
         ];
     }
 }

@@ -31,6 +31,8 @@ class StoreAssignmentRequest extends FormRequest
                 fn ($q) => $q->where('account_status', 'active')->whereNull('disabled_at')
                     ->whereIn('role_id', fn ($r) => $r->select('id')->from('roles')->where('code', $requirement->role)),
             ), Rule::unique('assignments', 'user_id')->where('event_id', $requirement->event_id)],
+            // Needed only when the duty is already full.
+            'override_reason' => ['nullable', 'string', 'min:5', 'max:500'],
         ];
     }
 
@@ -38,10 +40,16 @@ class StoreAssignmentRequest extends FormRequest
     public function after(): array
     {
         return [function (Validator $v) {
+            if ($v->errors()->isNotEmpty()) {
+                return;
+            }
             /** @var DutyRequirement $requirement */
             $requirement = $this->route('requirement');
-            if ($requirement->assignments()->count() >= $requirement->headcount) {
-                $v->errors()->add('user_id', 'This duty is already full.');
+            $clash = $requirement->overlapFor((int) $this->input('user_id'));
+            if ($clash !== null) {
+                $v->errors()->add('user_id', "This person already has a duty at that time ({$clash->event->title}).");
+            } elseif ($requirement->isFull() && blank($this->input('override_reason'))) {
+                $v->errors()->add('override_reason', 'This duty is already full. Give a reason to add one more person.');
             }
         }];
     }
