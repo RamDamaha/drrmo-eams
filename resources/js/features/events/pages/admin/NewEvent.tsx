@@ -122,15 +122,84 @@ export function NewEvent() {
           ? 'Locations did not load'
           : 'Choose a location';
 
+    const backTo = editingId ? `/admin/events/${editingId}` : '/admin/events';
+    const backLabel = editingId ? (existing.data?.title ?? 'Back to event') : 'Events';
+    const locked =
+        existing.data !== undefined &&
+        existing.data.status !== 'draft' &&
+        existing.data.status !== 'published';
+
+    const back = (
+        <Link
+            to={backTo}
+            className="-ml-1 inline-flex max-w-full items-center gap-1 rounded-control px-1 py-1 text-sm font-medium text-stone-600 transition-colors hover:text-maroon-700"
+        >
+            <ChevronIcon className="size-4 shrink-0 rotate-90" />
+            <span className="truncate">{backLabel}</span>
+        </Link>
+    );
+
+    if (editingId && existing.isPending) {
+        return (
+            <div className="mx-auto max-w-5xl" aria-busy="true">
+                {back}
+                <p role="status" className="sr-only">
+                    Loading the event...
+                </p>
+                <div className="mt-4 h-1 w-12 rounded-full bg-stone-200" aria-hidden="true" />
+                <div
+                    className="mt-4 h-7 w-48 animate-pulse rounded bg-stone-200"
+                    aria-hidden="true"
+                />
+                <div
+                    className="mt-8 grid gap-10 rounded-card bg-white p-6 ring-1 ring-stone-200 lg:grid-cols-3"
+                    aria-hidden="true"
+                >
+                    <div className="space-y-2">
+                        <div className="h-5 w-24 animate-pulse rounded bg-stone-200" />
+                        <div className="h-4 w-40 animate-pulse rounded bg-stone-200" />
+                    </div>
+                    <div className="space-y-5 lg:col-span-2">
+                        <div className="h-12 animate-pulse rounded-control bg-stone-200" />
+                        <div className="h-28 animate-pulse rounded-control bg-stone-200" />
+                        <div className="h-12 animate-pulse rounded-control bg-stone-200" />
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (editingId && (existing.isError || locked)) {
+        const missing = existing.error instanceof ApiError && existing.error.status === 404;
+        return (
+            <div className="mx-auto max-w-5xl">
+                {back}
+                <div className="mt-6 max-w-xl space-y-3">
+                    <Alert tone={locked ? 'info' : 'error'}>
+                        {locked
+                            ? `This event is ${existing.data?.status}, so it can no longer be edited.`
+                            : missing
+                              ? 'This event does not exist or was removed.'
+                              : 'The event did not load. Check your connection and try again.'}
+                    </Alert>
+                    {existing.isError && !missing && (
+                        <Button
+                            variant="secondary"
+                            size="md"
+                            loading={existing.isFetching}
+                            onClick={() => void existing.refetch()}
+                        >
+                            {existing.isFetching ? 'Retrying...' : 'Retry'}
+                        </Button>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="mx-auto max-w-5xl">
-            <Link
-                to="/admin/events"
-                className="-ml-1 inline-flex items-center gap-1 rounded-control px-1 py-1 text-sm font-medium text-stone-600 transition-colors hover:text-maroon-700"
-            >
-                <ChevronIcon className="size-4 rotate-90" />
-                Events
-            </Link>
+            {back}
 
             <header className="mt-4">
                 <div className="brand-stripe h-1 w-12 rounded-full" aria-hidden="true" />
@@ -139,10 +208,19 @@ export function NewEvent() {
                 </h1>
                 <p className="mt-1 text-pretty text-stone-600">
                     {editingId
-                        ? 'Duty shifts must stay inside the new times.'
+                        ? 'Change the details, place or time. Duties and people stay as they are.'
                         : 'The event is saved as a draft. You set the duty requirements next.'}
                 </p>
             </header>
+
+            {existing.data?.status === 'published' && (
+                <div className="mt-6 max-w-3xl">
+                    <Alert tone="info">
+                        This event is published. Assigned people see the new details as soon as you
+                        save.
+                    </Alert>
+                </div>
+            )}
 
             <form
                 onSubmit={submit}
@@ -213,7 +291,14 @@ export function NewEvent() {
                     </div>
                 </Section>
 
-                <Section title="Where and when" intro="Pick the campus spot and the duty window.">
+                <Section
+                    title="Where and when"
+                    intro={
+                        editingId
+                            ? 'Every duty shift must still fit inside the new start and end.'
+                            : 'Pick the campus spot and the duty window.'
+                    }
+                >
                     <div>
                         <SelectField
                             label="Campus location"
@@ -278,13 +363,17 @@ export function NewEvent() {
                     )}
                     <div className="flex flex-wrap items-center justify-end gap-3">
                         <Link
-                            to={editingId ? `/admin/events/${editingId}` : '/admin/events'}
+                            to={backTo}
                             className="inline-flex min-h-10 items-center rounded-control border border-stone-300 bg-white px-4 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-50 active:bg-stone-100"
                         >
                             Cancel
                         </Link>
                         <Button type="submit" size="md" loading={save.isPending}>
-                            {save.isPending ? 'Saving...' : 'Save event'}
+                            {save.isPending
+                                ? 'Saving...'
+                                : editingId
+                                  ? 'Save changes'
+                                  : 'Save event'}
                         </Button>
                     </div>
                 </div>

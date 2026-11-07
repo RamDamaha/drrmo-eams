@@ -57,9 +57,21 @@ export function SelectField({
 }
 
 // Options inside a muted select keep the normal text color.
-export function SelectOption({ value, children }: { value: string | number; children: ReactNode }) {
+export function SelectOption({
+    value,
+    disabled,
+    children,
+}: {
+    value: string | number;
+    disabled?: boolean;
+    children: ReactNode;
+}) {
     return (
-        <option value={value} className="text-stone-900">
+        <option
+            value={value}
+            disabled={disabled}
+            className="text-stone-900 disabled:text-stone-500"
+        >
             {children}
         </option>
     );

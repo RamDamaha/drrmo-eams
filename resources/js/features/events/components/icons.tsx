@@ -98,3 +98,27 @@ export function SlidersIcon({ className }: { className?: string }) {
         </Icon>
     );
 }
+
+export function CheckIcon({ className }: { className?: string }) {
+    return (
+        <Icon className={className}>
+            <path d="m5 12.5 4.5 4.5L19 7.5" />
+        </Icon>
+    );
+}
+
+export function MegaphoneIcon({ className }: { className?: string }) {
+    return (
+        <Icon className={className}>
+            <path d="M4 10v4a1 1 0 0 0 1 1h2l5 4V5L7 9H5a1 1 0 0 0-1 1ZM16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" />
+        </Icon>
+    );
+}
+
+export function PencilIcon({ className }: { className?: string }) {
+    return (
+        <Icon className={className}>
+            <path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16v4ZM13.5 6.5l4 4" />
+        </Icon>
+    );
+}

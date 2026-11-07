@@ -183,6 +183,7 @@ All in `resources/js/shared/ui`. Add a new shared piece only when two screens ne
 - Desktop buttons sit right aligned, Cancel then confirm, at `md`. On phones they stack full width at `lg`, confirm on top.
 - Esc and a click on the backdrop cancel. While the action runs, the confirm button shows a spinner and a new label ("Signing out..."), and Cancel, Esc and the backdrop do nothing.
 - If the action fails, keep the dialog open and show an `Alert` with `tone="error"` above the buttons.
+- A dialog may hold one short field under the body, such as a reason. The confirm button stays disabled until the field is valid.
 - Closing returns focus to the button that opened it.
 
 **Notice banner** (`CookieBanner.tsx`)

@@ -59,6 +59,8 @@ export interface Assignment {
     task_type: Option;
     status: 'assigned' | 'acknowledged' | 'on_duty' | 'completed' | 'cancelled' | 'no_show';
     acknowledged_at: string | null;
+    // Why an admin added this person after the duty was full.
+    override_reason: string | null;
 }
 
 export interface Candidate {
@@ -122,10 +124,14 @@ export async function listCandidates(requirementId: number): Promise<Candidate[]
     return body.data;
 }
 
-export async function assignPerson(requirementId: number, userId: number): Promise<void> {
+export async function assignPerson(
+    requirementId: number,
+    userId: number,
+    overrideReason?: string,
+): Promise<void> {
     await api(`/api/requirements/${requirementId}/assignments`, {
         method: 'POST',
-        body: JSON.stringify({ user_id: userId }),
+        body: JSON.stringify({ user_id: userId, override_reason: overrideReason || undefined }),
     });
 }
 

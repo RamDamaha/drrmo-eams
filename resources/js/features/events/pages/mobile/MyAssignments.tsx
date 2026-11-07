@@ -3,15 +3,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { acknowledgeAssignment, listMyAssignments, type MyAssignment } from '@/features/events/api';
-import { ClipboardIcon, ClockIcon, PinIcon } from '@/features/events/components/icons';
-import { chipClass } from '@/features/events/format';
+import { DateBlock } from '@/features/events/components/DateBlock';
+import { CheckIcon, ClipboardIcon, ClockIcon, PinIcon } from '@/features/events/components/icons';
+import { assignmentStatuses, chipClass } from '@/features/events/format';
 import { Alert } from '@/shared/ui/Alert';
 import { Button } from '@/shared/ui/Button';
 
-const month = new Intl.DateTimeFormat(undefined, { month: 'short' });
 const weekday = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
 const shortDay = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
 const clock = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
+const stamp = new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+});
 
 function shiftTime(start: Date, end: Date) {
     return start.toDateString() === end.toDateString()
@@ -19,31 +25,7 @@ function shiftTime(start: Date, end: Date) {
         : `${clock.format(start)} to ${shortDay.format(end)}, ${clock.format(end)}`;
 }
 
-function DateBlock({ date, cancelled }: { date: Date; cancelled: boolean }) {
-    const today = date.toDateString() === new Date().toDateString();
-    return (
-        <div
-            className="flex w-14 shrink-0 flex-col items-center rounded-control border border-stone-200 py-2"
-            aria-hidden="true"
-        >
-            <span
-                className={`text-xs font-semibold tracking-wide uppercase ${cancelled ? 'text-stone-500' : 'text-maroon-700'}`}
-            >
-                {month.format(date)}
-            </span>
-            <span className="mt-0.5 text-2xl leading-none font-semibold text-stone-900 tabular-nums">
-                {date.getDate()}
-            </span>
-            <span
-                className={`mt-1 text-xs ${today ? 'font-semibold text-stone-900' : 'text-stone-500'}`}
-            >
-                {today ? 'Today' : weekday.format(date)}
-            </span>
-        </div>
-    );
-}
-
-function DutyCard({ duty }: { duty: MyAssignment }) {
+function DutyCard({ duty, ended = false }: { duty: MyAssignment; ended?: boolean }) {
     const start = new Date(duty.starts_at);
     const end = new Date(duty.ends_at);
     const cancelled = duty.event.status === 'cancelled' || duty.status === 'cancelled';
@@ -61,7 +43,7 @@ function DutyCard({ duty }: { duty: MyAssignment }) {
                 className="h-full rounded-card bg-white ring-1 ring-stone-200"
             >
                 <div className="flex gap-4 p-4">
-                    <DateBlock date={start} cancelled={cancelled} />
+                    <DateBlock date={start} muted={cancelled || ended} />
                     <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
                             <p
@@ -70,12 +52,20 @@ function DutyCard({ duty }: { duty: MyAssignment }) {
                                 {duty.duty_type ?? 'Duty to be confirmed'}
                                 {duty.team_needed ? `, ${duty.team_needed}` : ''}
                             </p>
-                            {cancelled && (
+                            {cancelled ? (
                                 <span
                                     className={`${chipClass} shrink-0 bg-stone-100 text-stone-600 ring-stone-200`}
                                 >
                                     Cancelled
                                 </span>
+                            ) : (
+                                duty.status !== 'assigned' && (
+                                    <span
+                                        className={`${chipClass} shrink-0 ${assignmentStatuses[duty.status].chip}`}
+                                    >
+                                        {assignmentStatuses[duty.status].label}
+                                    </span>
+                                )
                             )}
                         </div>
                         <h3
@@ -119,33 +109,50 @@ function DutyCard({ duty }: { duty: MyAssignment }) {
                         </p>
                     </div>
                 )}
-                {!cancelled && (duty.status === 'assigned' || duty.status === 'acknowledged') && (
-                    <div className="border-t border-stone-100 px-4 py-3">
-                        {duty.status === 'acknowledged' ? (
-                            <p className="text-sm font-medium text-green-800">Acknowledged</p>
-                        ) : (
-                            <Button
-                                size="lg"
-                                className="w-full"
-                                loading={acknowledge.isPending}
-                                onClick={() => acknowledge.mutate()}
-                            >
-                                Acknowledge duty
-                            </Button>
-                        )}
+                {!cancelled && !ended && duty.status === 'assigned' && (
+                    <div className="rounded-b-card border-t border-sky-200 bg-sky-50 px-4 py-3">
+                        <p className="text-sm text-pretty text-stone-700">
+                            Let DRRMO know you have seen this duty and will be there.
+                        </p>
                         {acknowledge.isError && (
-                            <p role="alert" className="mt-2 text-sm text-red-700">
-                                That did not save. Try again.
-                            </p>
+                            <div className="mt-3">
+                                <Alert tone="error">
+                                    That did not save. Check your connection and try again.
+                                </Alert>
+                            </div>
                         )}
+                        <Button
+                            block
+                            className="mt-3"
+                            loading={acknowledge.isPending}
+                            onClick={() => acknowledge.mutate()}
+                        >
+                            {acknowledge.isPending ? 'Saving...' : 'Acknowledge duty'}
+                        </Button>
                     </div>
+                )}
+                {!cancelled && duty.status === 'acknowledged' && duty.acknowledged_at && (
+                    <p className="flex items-center gap-2 border-t border-stone-100 px-4 py-3 text-sm text-stone-600">
+                        <CheckIcon className="size-4 shrink-0 text-green-700" />
+                        <span className="tabular-nums">
+                            You acknowledged this on {stamp.format(new Date(duty.acknowledged_at))}.
+                        </span>
+                    </p>
                 )}
             </article>
         </li>
     );
 }
 
-function DutyList({ title, duties }: { title: string; duties: MyAssignment[] }) {
+function DutyList({
+    title,
+    duties,
+    ended = false,
+}: {
+    title: string;
+    duties: MyAssignment[];
+    ended?: boolean;
+}) {
     const id = `duties-${title.toLowerCase()}`;
     return (
         <section aria-labelledby={id} className="mt-8">
@@ -157,7 +164,7 @@ function DutyList({ title, duties }: { title: string; duties: MyAssignment[] }) 
             </h2>
             <ul className="mt-3 grid gap-3 lg:grid-cols-2">
                 {duties.map((duty) => (
-                    <DutyCard key={duty.id} duty={duty} />
+                    <DutyCard key={duty.id} duty={duty} ended={ended} />
                 ))}
             </ul>
         </section>
@@ -198,6 +205,7 @@ export function MyAssignments() {
     const cancelled = all.filter((duty) => duty.event.status === 'cancelled');
     const upcoming = live.filter((duty) => new Date(duty.ends_at).getTime() >= now);
     const past = live.filter((duty) => new Date(duty.ends_at).getTime() < now).reverse();
+    const toAcknowledge = upcoming.filter((duty) => duty.status === 'assigned').length;
 
     return (
         <div>
@@ -206,6 +214,18 @@ export function MyAssignments() {
             <p className="mt-1 text-base text-pretty text-stone-600">
                 Where to be and when, soonest first.
             </p>
+
+            {toAcknowledge > 0 && (
+                <p
+                    className="mt-4 flex items-center gap-2 rounded-control bg-sky-50 px-3 py-2.5 text-sm font-medium text-sky-800 ring-1 ring-sky-200 ring-inset"
+                    aria-live="polite"
+                >
+                    <ClipboardIcon className="size-4 shrink-0" />
+                    {toAcknowledge === 1
+                        ? '1 duty needs your acknowledgement.'
+                        : `${toAcknowledge} duties need your acknowledgement.`}
+                </p>
+            )}
 
             {duties.isPending && <Skeleton />}
 
@@ -246,7 +266,7 @@ export function MyAssignments() {
                             No upcoming duties.
                         </p>
                     )}
-                    {past.length > 0 && <DutyList title="Past" duties={past} />}
+                    {past.length > 0 && <DutyList title="Past" duties={past} ended />}
                     {cancelled.length > 0 && (
                         <details className="group mt-8 border-t border-stone-200 pt-4">
                             <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-control text-base font-semibold text-stone-700 [&::-webkit-details-marker]:hidden">

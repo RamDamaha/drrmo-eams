@@ -25,13 +25,20 @@ import {
     CalendarIcon,
     ChevronIcon,
     ClockIcon,
+    PencilIcon,
     PeopleIcon,
     PinIcon,
     PlusIcon,
     TagIcon,
 } from '@/features/events/components/icons';
 import { SelectField, SelectOption } from '@/features/events/components/SelectField';
-import { chipClass, schedule, statuses } from '@/features/events/format';
+import {
+    assignmentStatuses,
+    busyChip,
+    chipClass,
+    schedule,
+    statuses,
+} from '@/features/events/format';
 import { ApiError } from '@/shared/api/client';
 import { Alert } from '@/shared/ui/Alert';
 import { Button } from '@/shared/ui/Button';
@@ -118,6 +125,49 @@ function OpenSpot() {
 const stillNeeded = (open: number, labels: { plural: string; one: string }) =>
     `${open} ${open === 1 ? labels.one : labels.plural.toLowerCase()} still needed`;
 
+// People who hold a spot. No shows and removed people do not count.
+const holdsSpot = (row: Assignment) => row.status !== 'no_show' && row.status !== 'cancelled';
+const spotsTaken = (requirement: Requirement) => requirement.assignments.filter(holdsSpot).length;
+
+const rowButton =
+    'inline-flex min-h-10 items-center rounded-control px-3 text-sm font-semibold transition-colors disabled:cursor-progress disabled:opacity-60';
+
+type RowAction = { kind: 'no_show' | 'cancel'; row: Assignment };
+
+function ReasonField({
+    id,
+    label = 'Reason',
+    value,
+    onChange,
+    hint,
+}: {
+    id: string;
+    label?: string;
+    value: string;
+    onChange: (value: string) => void;
+    hint: string;
+}) {
+    return (
+        <div>
+            <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-stone-800">
+                {label}
+            </label>
+            <textarea
+                id={id}
+                rows={2}
+                maxLength={500}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                aria-describedby={`${id}-hint`}
+                className={`${controlClass(false)} min-h-20 resize-y py-2.5 leading-relaxed`}
+            />
+            <p id={`${id}-hint`} className="mt-1.5 text-sm text-stone-500">
+                {hint}
+            </p>
+        </div>
+    );
+}
+
 // One duty inside a role column: a quiet header row, then the people in it.
 function DutyGroup({
     requirement,
@@ -135,30 +185,34 @@ function DutyGroup({
 }) {
     const queryClient = useQueryClient();
     const labels = roleLabels[requirement.role];
-    const filled = requirement.assignments.filter((a) => a.status !== 'no_show').length;
+    const filled = spotsTaken(requirement);
     const acknowledged = requirement.assignments.filter((a) => a.status === 'acknowledged').length;
     const open = Math.max(requirement.headcount - filled, 0);
+    const [action, setAction] = useState<RowAction | null>(null);
+    const [reason, setReason] = useState('');
+    const [dialogError, setDialogError] = useState<string | null>(null);
 
     const refresh = () =>
         Promise.all([
             queryClient.invalidateQueries({ queryKey: ['event'] }),
             queryClient.invalidateQueries({ queryKey: ['requirement-candidates'] }),
         ]);
+    // Someone who has not acknowledged yet comes off at once. After that, a reason is needed.
     const remove = useMutation({
-        mutationFn: async (row: Assignment) => {
-            if (row.status === 'assigned') return removeAssignment(row.id);
-            const reason = window.prompt(`Why is ${row.person.name} being taken off this duty?`);
-            if (!reason || reason.trim().length < 5)
-                throw new Error('A reason of at least 5 characters is needed.');
-            return cancelAssignment(row.id, reason.trim());
-        },
+        mutationFn: (row: Assignment) => removeAssignment(row.id),
         onSuccess: refresh,
         onError: (failure) => onError(failMessage(failure)),
     });
-    const noShow = useMutation({
-        mutationFn: markNoShow,
-        onSuccess: refresh,
-        onError: (failure) => onError(failMessage(failure)),
+    const confirm = useMutation({
+        mutationFn: (current: RowAction) =>
+            current.kind === 'no_show'
+                ? markNoShow(current.row.id)
+                : cancelAssignment(current.row.id, reason.trim()),
+        onSuccess: async () => {
+            await refresh();
+            setAction(null);
+        },
+        onError: (failure) => setDialogError(failMessage(failure)),
     });
     const [now] = useState(() => Date.now());
     const started = new Date(requirement.shift_starts_at).getTime() <= now;
@@ -167,6 +221,16 @@ function DutyGroup({
         onSuccess: refresh,
         onError: (failure) => onError(failMessage(failure)),
     });
+
+    function ask(kind: RowAction['kind'], row: Assignment) {
+        onError(null);
+        setReason('');
+        setDialogError(null);
+        setAction({ kind, row });
+    }
+
+    const person = action?.row.person.name ?? '';
+    const firstName = person.split(' ')[0];
 
     return (
         <li>
@@ -190,8 +254,8 @@ function DutyGroup({
                         </p>
                     )}
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                    {editable && filled === 0 && (
+                <div className="flex shrink-0 items-center gap-3">
+                    {editable && requirement.assignments.length === 0 && (
                         <button
                             type="button"
                             disabled={dropDuty.isPending}
@@ -205,89 +269,111 @@ function DutyGroup({
                             {dropDuty.isPending ? 'Deleting...' : 'Delete'}
                         </button>
                     )}
-                    {open === 0 ? (
-                        <span className={`${chipClass} bg-green-50 text-green-800 ring-green-200`}>
-                            Full, {filled} of {requirement.headcount}
-                        </span>
-                    ) : (
-                        <p className="text-sm text-stone-600 tabular-nums">
-                            <span className="font-semibold text-stone-900">{filled}</span> of{' '}
-                            {requirement.headcount}
-                        </p>
-                    )}
-                    {filled > 0 && (
-                        <p className="text-xs text-stone-500 tabular-nums">
-                            {acknowledged} acknowledged
-                        </p>
-                    )}
+                    <div className="text-right">
+                        {open === 0 ? (
+                            <span
+                                className={`${chipClass} bg-green-50 text-green-800 ring-green-200 tabular-nums`}
+                            >
+                                Full, {filled} of {requirement.headcount}
+                            </span>
+                        ) : (
+                            <p className="text-sm text-stone-600 tabular-nums">
+                                <span className="font-semibold text-stone-900">{filled}</span> of{' '}
+                                {requirement.headcount}
+                            </p>
+                        )}
+                        {filled > 0 && (
+                            <p className="mt-0.5 text-xs text-stone-500 tabular-nums">
+                                {acknowledged} of {filled} acknowledged
+                            </p>
+                        )}
+                    </div>
                 </div>
             </div>
             <ul className="divide-y divide-stone-100">
                 {requirement.assignments.map((row) => {
                     const removing = remove.isPending && remove.variables?.id === row.id;
+                    const out = !holdsSpot(row);
+                    const chip = row.status === 'assigned' ? null : assignmentStatuses[row.status];
+                    const canChange =
+                        editable && (row.status === 'assigned' || row.status === 'acknowledged');
                     return (
                         <li
                             key={row.id}
                             className="flex items-center gap-3 px-6 py-2.5 transition-colors hover:bg-stone-50"
                         >
                             <span
-                                className="flex size-9 shrink-0 items-center justify-center rounded-full bg-maroon-50 text-sm font-semibold text-maroon-800"
+                                className={`flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${out ? 'bg-stone-100 text-stone-500' : 'bg-maroon-50 text-maroon-800'}`}
                                 aria-hidden="true"
                             >
                                 {initials(row.person.name)}
                             </span>
                             <div className="min-w-0 flex-1">
-                                <p className="truncate font-medium text-stone-900">
-                                    {row.person.name}
-                                    {row.status === 'acknowledged' && (
+                                <div className="flex min-w-0 items-center gap-2">
+                                    <p
+                                        className={`truncate font-medium ${out ? 'text-stone-500' : 'text-stone-900'}`}
+                                    >
+                                        {row.person.name}
+                                    </p>
+                                    {chip && (
                                         <span
-                                            className={`${chipClass} ml-2 bg-green-50 text-green-800 ring-green-200`}
+                                            className={`${chipClass} shrink-0 gap-1.5 ${chip.chip}`}
                                         >
-                                            Acknowledged
+                                            {row.status === 'on_duty' && (
+                                                <span
+                                                    className="size-1.5 animate-pulse rounded-full bg-ember-500"
+                                                    aria-hidden="true"
+                                                />
+                                            )}
+                                            {chip.label}
                                         </span>
                                     )}
-                                    {row.status === 'no_show' && (
-                                        <span
-                                            className={`${chipClass} ml-2 bg-red-50 text-red-800 ring-red-200`}
-                                        >
-                                            No show
-                                        </span>
-                                    )}
-                                </p>
+                                </div>
                                 <p className="truncate text-sm text-stone-500">
                                     {row.person.email}
                                 </p>
-                            </div>
-                            {editable &&
-                                started &&
-                                (row.status === 'assigned' || row.status === 'acknowledged') && (
-                                    <Button
-                                        size="md"
-                                        variant="ghost"
-                                        onClick={() => {
-                                            onError(null);
-                                            noShow.mutate(row.id);
-                                        }}
-                                        aria-label={`Mark ${row.person.name} as no show`}
+                                {row.override_reason && (
+                                    <p
+                                        className="mt-0.5 line-clamp-2 text-xs text-stone-600"
+                                        title={row.override_reason}
                                     >
-                                        No show
-                                    </Button>
+                                        <span className="font-semibold text-amber-900">
+                                            Over headcount:
+                                        </span>{' '}
+                                        {row.override_reason}
+                                    </p>
                                 )}
-                            {editable &&
-                                (row.status === 'assigned' || row.status === 'acknowledged') && (
-                                    <Button
-                                        size="md"
-                                        variant="ghost"
-                                        loading={removing}
+                            </div>
+                            {canChange && (
+                                <div className="flex shrink-0 items-center gap-1">
+                                    {started && (
+                                        <button
+                                            type="button"
+                                            onClick={() => ask('no_show', row)}
+                                            className={`${rowButton} text-stone-700 hover:bg-stone-100`}
+                                            aria-label={`Mark ${row.person.name} as no show`}
+                                        >
+                                            No show
+                                        </button>
+                                    )}
+                                    <button
+                                        type="button"
+                                        disabled={removing}
                                         onClick={() => {
-                                            onError(null);
-                                            remove.mutate(row);
+                                            if (row.status === 'acknowledged') {
+                                                ask('cancel', row);
+                                            } else {
+                                                onError(null);
+                                                remove.mutate(row);
+                                            }
                                         }}
+                                        className={`${rowButton} text-red-700 hover:bg-red-50`}
                                         aria-label={`Remove ${row.person.name}`}
                                     >
                                         {removing ? 'Removing...' : 'Remove'}
-                                    </Button>
-                                )}
+                                    </button>
+                                </div>
+                            )}
                         </li>
                     );
                 })}
@@ -314,13 +400,47 @@ function DutyGroup({
                     </li>
                 )}
             </ul>
+            <ConfirmDialog
+                open={action !== null}
+                title={
+                    action?.kind === 'no_show'
+                        ? `Mark ${person} as no show?`
+                        : `Take ${person} off this duty?`
+                }
+                description={
+                    action?.kind === 'no_show'
+                        ? `${firstName} did not report for ${dutyName(requirement)}. Their spot opens so you can fill it. This stays on their record.`
+                        : `${firstName} already acknowledged ${dutyName(requirement)}. Say why, so the record shows it. They will see the duty as cancelled.`
+                }
+                confirmLabel={action?.kind === 'no_show' ? 'Mark no show' : 'Take off duty'}
+                loadingLabel="Saving..."
+                cancelLabel="Keep"
+                tone="danger"
+                loading={confirm.isPending}
+                error={dialogError}
+                confirmDisabled={action?.kind === 'cancel' && reason.trim().length < 5}
+                onConfirm={() => {
+                    if (action) confirm.mutate(action);
+                }}
+                onCancel={() => setAction(null)}
+            >
+                {action?.kind === 'cancel' && (
+                    <ReasonField
+                        id={`cancel-reason-${requirement.id}`}
+                        value={reason}
+                        onChange={setReason}
+                        hint="At least 5 characters. It is kept in the audit log."
+                    />
+                )}
+            </ConfirmDialog>
         </li>
     );
 }
 
 interface AssignProps {
     role: Role;
-    openDuties: Requirement[];
+    // Every duty for this role. A full one can still take a person, with a reason.
+    duties: Requirement[];
     dutyId: string;
     onPick: (id: string) => void;
     // Goes up by one each time "Fill a spot" is clicked, to bring the person list into focus.
@@ -328,11 +448,14 @@ interface AssignProps {
 }
 
 // Pick the duty, then the person. "Fill a spot" on a duty picks it here.
-function AssignForm({ role, openDuties, dutyId, onPick, focusRequest }: AssignProps) {
+function AssignForm({ role, duties, dutyId, onPick, focusRequest }: AssignProps) {
     const queryClient = useQueryClient();
     const labels = roleLabels[role];
     const [userId, setUserId] = useState('');
+    const [reason, setReason] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const duty = duties.find((r) => String(r.id) === dutyId);
+    const full = duty !== undefined && spotsTaken(duty) >= duty.headcount;
 
     const candidates = useQuery({
         queryKey: ['requirement-candidates', Number(dutyId)],
@@ -341,9 +464,11 @@ function AssignForm({ role, openDuties, dutyId, onPick, focusRequest }: AssignPr
     });
 
     const add = useMutation({
-        mutationFn: () => assignPerson(Number(dutyId), Number(userId)),
+        mutationFn: () =>
+            assignPerson(Number(dutyId), Number(userId), full ? reason.trim() : undefined),
         onSuccess: () => {
             setUserId('');
+            setReason('');
             return Promise.all([
                 queryClient.invalidateQueries({ queryKey: ['event'] }),
                 queryClient.invalidateQueries({ queryKey: ['requirement-candidates'] }),
@@ -359,6 +484,7 @@ function AssignForm({ role, openDuties, dutyId, onPick, focusRequest }: AssignPr
     }
 
     const options = (candidates.data ?? []).filter((person) => person.role === role);
+    const free = options.filter((person) => person.conflict === null);
     const ready = candidates.isSuccess;
 
     useEffect(() => {
@@ -372,9 +498,9 @@ function AssignForm({ role, openDuties, dutyId, onPick, focusRequest }: AssignPr
         ? 'Choose a duty first'
         : !candidates.isSuccess
           ? 'Loading people...'
-          : options.length
+          : free.length
             ? 'Choose a person'
-            : `No ${labels.plural.toLowerCase()} left to add`;
+            : `No ${labels.plural.toLowerCase()} free to add`;
 
     return (
         <form
@@ -387,19 +513,22 @@ function AssignForm({ role, openDuties, dutyId, onPick, focusRequest }: AssignPr
                     id={`${role}-duty`}
                     label="Duty"
                     size="md"
-                    placeholder={openDuties.length ? 'Choose a duty' : 'All duties are full'}
+                    placeholder="Choose a duty"
                     value={dutyId}
                     onChange={(e) => {
                         onPick(e.target.value);
                         setUserId('');
+                        setError(null);
                     }}
-                    disabled={openDuties.length === 0}
                 >
-                    {openDuties.map((r) => (
-                        <SelectOption key={r.id} value={r.id}>
-                            {dutyName(r)} ({r.headcount - r.assignments.length} open)
-                        </SelectOption>
-                    ))}
+                    {duties.map((r) => {
+                        const left = r.headcount - spotsTaken(r);
+                        return (
+                            <SelectOption key={r.id} value={r.id}>
+                                {dutyName(r)} ({left > 0 ? `${left} open` : 'full'})
+                            </SelectOption>
+                        );
+                    })}
                 </SelectField>
                 <SelectField
                     id={`${role}-person`}
@@ -408,11 +537,17 @@ function AssignForm({ role, openDuties, dutyId, onPick, focusRequest }: AssignPr
                     placeholder={personPlaceholder}
                     value={userId}
                     onChange={(e) => setUserId(e.target.value)}
-                    disabled={!dutyId || !candidates.isSuccess || options.length === 0}
+                    disabled={!dutyId || !candidates.isSuccess || free.length === 0}
                 >
                     {options.map((person) => (
-                        <SelectOption key={person.id} value={person.id}>
-                            {person.name}
+                        <SelectOption
+                            key={person.id}
+                            value={person.id}
+                            disabled={person.conflict !== null}
+                        >
+                            {person.conflict
+                                ? `${person.name} (busy: ${person.conflict})`
+                                : person.name}
                         </SelectOption>
                     ))}
                 </SelectField>
@@ -420,11 +555,28 @@ function AssignForm({ role, openDuties, dutyId, onPick, focusRequest }: AssignPr
                     type="submit"
                     size="md"
                     loading={add.isPending}
-                    disabled={!dutyId || !userId}
+                    disabled={!dutyId || !userId || (full && reason.trim().length < 5)}
                 >
-                    {add.isPending ? 'Assigning...' : 'Assign'}
+                    {add.isPending ? 'Assigning...' : full ? 'Assign anyway' : 'Assign'}
                 </Button>
             </div>
+            {full && (
+                <div className="rounded-control border border-amber-200 bg-amber-50 px-4 py-3">
+                    <p className="text-sm font-semibold text-amber-900">This duty is full.</p>
+                    <p className="mt-0.5 text-sm text-stone-700">
+                        You can still add one more person. Say why, so the record shows it.
+                    </p>
+                    <div className="mt-3">
+                        <ReasonField
+                            id={`${role}-override`}
+                            label="Reason to go over the headcount"
+                            value={reason}
+                            onChange={setReason}
+                            hint="At least 5 characters. It is kept in the audit log."
+                        />
+                    </div>
+                </div>
+            )}
             {error && <Alert tone="error">{error}</Alert>}
         </form>
     );
@@ -568,11 +720,12 @@ function PickPeople({ requirement, onDone }: { requirement: Requirement; onDone:
                     <ul className="max-h-72 divide-y divide-stone-100 overflow-y-auto rounded-control ring-1 ring-stone-200">
                         {shown.map((person) => {
                             const checked = chosen.includes(person.id);
-                            const disabled = (!checked && full) || person.conflict !== null;
+                            const busy = person.conflict !== null;
+                            const disabled = (!checked && full) || busy;
                             return (
                                 <li key={person.id}>
                                     <label
-                                        className={`flex min-h-12 items-center gap-3 px-4 py-2 transition-colors ${checked ? 'bg-maroon-50' : ''} ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-stone-50'}`}
+                                        className={`flex min-h-12 items-center gap-3 px-4 py-2 transition-colors ${checked ? 'bg-maroon-50' : ''} ${disabled ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-stone-50'}`}
                                     >
                                         <input
                                             type="checkbox"
@@ -582,19 +735,26 @@ function PickPeople({ requirement, onDone }: { requirement: Requirement; onDone:
                                             className="size-4 shrink-0 accent-maroon-700"
                                         />
                                         <span
-                                            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-maroon-50 text-xs font-semibold text-maroon-800"
+                                            className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${disabled ? 'bg-stone-100 text-stone-500' : 'bg-maroon-50 text-maroon-800'}`}
                                             aria-hidden="true"
                                         >
                                             {initials(person.name)}
                                         </span>
-                                        <span className="min-w-0 truncate font-medium text-stone-900">
-                                            {person.name}
-                                        </span>
-                                        {person.conflict && (
+                                        <span className="min-w-0 flex-1">
                                             <span
-                                                className={`${chipClass} bg-amber-50 text-amber-800 ring-amber-200`}
+                                                className={`block truncate font-medium ${disabled ? 'text-stone-500' : 'text-stone-900'}`}
                                             >
-                                                Busy: {person.conflict}
+                                                {person.name}
+                                            </span>
+                                            {busy && (
+                                                <span className="block truncate text-xs text-stone-600">
+                                                    On duty at {person.conflict} at this time
+                                                </span>
+                                            )}
+                                        </span>
+                                        {busy && (
+                                            <span className={`${chipClass} shrink-0 ${busyChip}`}>
+                                                Busy
                                             </span>
                                         )}
                                     </label>
@@ -840,20 +1000,17 @@ function RoleColumn({ event, role, requirements, editable, taskTypes }: ColumnPr
     const [picked, setPicked] = useState('');
     const [focusRequest, setFocusRequest] = useState(0);
     const labels = roleLabels[role];
-    const openDuties = requirements.filter((r) => r.assignments.length < r.headcount);
-    // A picked duty that filled up falls back to the only open one, or to none.
+    const openDuties = requirements.filter((r) => spotsTaken(r) < r.headcount);
+    // A picked duty stays picked, even when full. Otherwise use the only open one, or none.
     const dutyId =
-        picked && openDuties.some((r) => String(r.id) === picked)
+        picked && requirements.some((r) => String(r.id) === picked)
             ? picked
             : openDuties.length === 1
               ? String(openDuties[0].id)
               : '';
     const headingId = `${role}-heading`;
     const needed = requirements.reduce((sum, r) => sum + r.headcount, 0);
-    const assigned = requirements.reduce(
-        (sum, r) => sum + Math.min(r.assignments.length, r.headcount),
-        0,
-    );
+    const assigned = requirements.reduce((sum, r) => sum + Math.min(spotsTaken(r), r.headcount), 0);
     const canAdd = editable && taskTypes !== undefined;
     const percent = needed ? Math.round((assigned / needed) * 100) : 0;
 
@@ -962,7 +1119,7 @@ function RoleColumn({ event, role, requirements, editable, taskTypes }: ColumnPr
             {editable && requirements.length > 0 && (
                 <AssignForm
                     role={role}
-                    openDuties={openDuties}
+                    duties={requirements}
                     dutyId={dutyId}
                     onPick={setPicked}
                     focusRequest={focusRequest}
@@ -1029,22 +1186,23 @@ function EventActions({ event }: { event: EventSummary }) {
     return (
         <div className="flex max-w-sm flex-col items-start gap-3 lg:items-end">
             <div className="flex flex-wrap items-center gap-3 lg:justify-end">
-                <Link
-                    to={`/admin/events/${event.id}/edit`}
-                    className="inline-flex min-h-10 items-center rounded-control border border-stone-300 bg-white px-4 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-50"
-                >
-                    Edit event
-                </Link>
-                <Button
-                    size="md"
-                    variant="secondary"
+                <button
+                    type="button"
                     onClick={() => {
                         setError(null);
                         setConfirmCancel(true);
                     }}
+                    className="inline-flex min-h-10 items-center rounded-control px-3 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50"
                 >
                     Cancel event
-                </Button>
+                </button>
+                <Link
+                    to={`/admin/events/${event.id}/edit`}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-control border border-stone-300 bg-white px-4 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-50 active:bg-stone-100"
+                >
+                    <PencilIcon className="size-4 text-stone-500" />
+                    Edit event
+                </Link>
                 {event.status === 'draft' && (
                     <Button
                         size="md"
