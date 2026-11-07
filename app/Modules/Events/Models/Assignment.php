@@ -10,12 +10,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Assignment extends Model
 {
-    protected $fillable = ['event_id', 'user_id', 'duty_type_id', 'assigned_by'];
+    protected $fillable = ['event_id', 'requirement_id', 'user_id', 'duty_type_id', 'assigned_by'];
 
     /** @return BelongsTo<Event, $this> */
     public function event(): BelongsTo
     {
         return $this->belongsTo(Event::class);
+    }
+
+    /** @return BelongsTo<DutyRequirement, $this> */
+    public function requirement(): BelongsTo
+    {
+        return $this->belongsTo(DutyRequirement::class, 'requirement_id');
     }
 
     /** @return BelongsTo<User, $this> */

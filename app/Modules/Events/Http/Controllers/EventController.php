@@ -40,6 +40,28 @@ class EventController
     {
         Gate::authorize('viewAny', Event::class);
 
-        return new EventResource($event->load(['location', 'assignments' => fn ($q) => $q->with(['user.role', 'dutyType'])->orderBy('id')]));
+        return new EventResource($event->load(['location', 'requirements' => fn ($q) => $q->with(['dutyType', 'assignments' => fn ($a) => $a->with(['user.role', 'dutyType'])->orderBy('id')])->orderBy('shift_starts_at')->orderBy('id')]));
+    }
+
+    public function publish(Event $event, AuditLogger $audit): EventResource
+    {
+        Gate::authorize('create', Event::class);
+        abort_unless($event->status === EventStatus::Draft, 422, 'Only a draft event can be published.');
+
+        $event->update(['status' => EventStatus::Published]);
+        $audit->log('event.published', $event);
+
+        return new EventResource($event->load('location'));
+    }
+
+    public function cancel(Event $event, AuditLogger $audit): EventResource
+    {
+        Gate::authorize('create', Event::class);
+        abort_unless(in_array($event->status, [EventStatus::Draft, EventStatus::Published], true), 422, 'This event cannot be cancelled.');
+
+        $event->update(['status' => EventStatus::Cancelled]);
+        $audit->log('event.cancelled', $event);
+
+        return new EventResource($event->load('location'));
     }
 }

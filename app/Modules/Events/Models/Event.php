@@ -59,4 +59,10 @@ class Event extends Model
     {
         return $this->hasMany(Assignment::class);
     }
+
+    /** @return HasMany<DutyRequirement, $this> */
+    public function requirements(): HasMany
+    {
+        return $this->hasMany(DutyRequirement::class);
+    }
 }

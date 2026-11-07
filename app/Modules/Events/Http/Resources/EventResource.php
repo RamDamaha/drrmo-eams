@@ -23,7 +23,7 @@ class EventResource extends JsonResource
             'starts_at' => $this->starts_at->toIso8601String(),
             'ends_at' => $this->ends_at->toIso8601String(),
             'location' => $this->whenLoaded('location', fn () => ['id' => $this->location->id, 'name' => $this->location->name]),
-            'assignments' => AssignmentResource::collection($this->whenLoaded('assignments')),
+            'requirements' => RequirementResource::collection($this->whenLoaded('requirements')),
         ];
     }
 }

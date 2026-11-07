@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Access\Enums\Role as RoleCode;
 use App\Modules\Events\Models\Assignment;
 use App\Modules\Events\Models\CampusLocation;
+use App\Modules\Events\Models\DutyRequirement;
 use App\Modules\Events\Models\DutyType;
 use App\Modules\Events\Models\Event;
 use App\Modules\Personnel\Models\User;
@@ -76,49 +77,117 @@ it('gives the admin the campus locations for the form', function () {
         ->assertJsonPath('data.locations.0.name', 'Administration building');
 });
 
-it('assigns marshals and volunteers with a task type and lists them on the event', function () {
+function requirementPayload(Event $event, array $over = []): array
+{
+    return [
+        'duty_type_id' => DutyType::query()->firstOrFail()->id,
+        'role' => 'marshal',
+        'headcount' => 2,
+        'shift_starts_at' => $event->starts_at->toIso8601String(),
+        'shift_ends_at' => $event->ends_at->toIso8601String(),
+        ...$over,
+    ];
+}
+
+it('adds a duty requirement inside the event time and refuses one outside it', function () {
     $admin = User::factory()->role(RoleCode::Admin)->create();
-    $marshal = User::factory()->role(RoleCode::Marshal)->create();
+    $event = Event::factory()->create();
+    $cookies = loginCookies($admin);
+
+    withAuthCookies($cookies)->postJson("/api/events/{$event->id}/requirements", requirementPayload($event, ['team_needed' => 'Fire Suppression', 'instructions' => 'Report at the gate.']))
+        ->assertCreated()->assertJsonPath('data.headcount', 2);
+    withAuthCookies($cookies)->postJson("/api/events/{$event->id}/requirements", requirementPayload($event, [
+        'shift_ends_at' => $event->ends_at->addHour()->toIso8601String(),
+    ]))->assertUnprocessable()->assertJsonValidationErrors(['shift_starts_at']);
+    withAuthCookies($cookies)->postJson("/api/events/{$event->id}/requirements", requirementPayload($event, ['headcount' => 0]))
+        ->assertUnprocessable()->assertJsonValidationErrors(['headcount']);
+
+    expect(DutyRequirement::query()->count())->toBe(1)
+        ->and(AuditLog::query()->where('action', 'requirement.created')->count())->toBe(1);
+});
+
+it('fills a requirement with people of the right role until it is full', function () {
+    $admin = User::factory()->role(RoleCode::Admin)->create();
+    $marshals = User::factory()->role(RoleCode::Marshal)->count(2)->create();
     $volunteer = User::factory()->role(RoleCode::Volunteer)->create();
     $event = Event::factory()->create();
-    $task = DutyType::query()->firstOrFail();
     $cookies = loginCookies($admin);
+    $requirement = $event->requirements()->create(requirementPayload($event, ['headcount' => 1]));
+    $url = "/api/requirements/{$requirement->id}/assignments";
 
-    withAuthCookies($cookies)->postJson("/api/events/{$event->id}/assignments", ['user_id' => $marshal->id, 'duty_type_id' => $task->id])
-        ->assertCreated()->assertJsonPath('data.role', 'marshal');
-    withAuthCookies($cookies)->postJson("/api/events/{$event->id}/assignments", ['user_id' => $volunteer->id, 'duty_type_id' => $task->id])
-        ->assertCreated()->assertJsonPath('data.role', 'volunteer');
+    withAuthCookies($cookies)->getJson("/api/requirements/{$requirement->id}/candidates")
+        ->assertOk()->assertJsonCount(2, 'data');
+    withAuthCookies($cookies)->postJson($url, ['user_id' => $volunteer->id])->assertUnprocessable();
+    withAuthCookies($cookies)->postJson($url, ['user_id' => $marshals[0]->id])->assertCreated();
+    withAuthCookies($cookies)->postJson($url, ['user_id' => $marshals[1]->id])->assertUnprocessable();
 
     withAuthCookies($cookies)->getJson("/api/events/{$event->id}")
-        ->assertOk()->assertJsonCount(2, 'data.assignments');
-    withAuthCookies($cookies)->getJson("/api/events/{$event->id}/candidates")
-        ->assertOk()->assertJsonCount(0, 'data');
-    expect(AuditLog::query()->where('action', 'assignment.created')->count())->toBe(2);
+        ->assertOk()->assertJsonCount(1, 'data.requirements.0.assignments');
+    expect(AuditLog::query()->where('action', 'assignment.created')->count())->toBe(1);
 });
 
-it('refuses duplicate, admin or non-existent people and removes an assignment', function () {
+it('refuses a duplicate person, removes an assignment and keeps a filled requirement undeletable', function () {
     $admin = User::factory()->role(RoleCode::Admin)->create();
     $marshal = User::factory()->role(RoleCode::Marshal)->create();
     $event = Event::factory()->create();
-    $task = DutyType::query()->firstOrFail();
     $cookies = loginCookies($admin);
-    $url = "/api/events/{$event->id}/assignments";
+    $requirement = $event->requirements()->create(requirementPayload($event));
+    $url = "/api/requirements/{$requirement->id}/assignments";
 
-    $id = withAuthCookies($cookies)->postJson($url, ['user_id' => $marshal->id, 'duty_type_id' => $task->id])->json('data.id');
-    withAuthCookies($cookies)->postJson($url, ['user_id' => $marshal->id, 'duty_type_id' => $task->id])->assertUnprocessable();
-    withAuthCookies($cookies)->postJson($url, ['user_id' => $admin->id, 'duty_type_id' => $task->id])->assertUnprocessable();
+    $id = withAuthCookies($cookies)->postJson($url, ['user_id' => $marshal->id])->json('data.id');
+    withAuthCookies($cookies)->postJson($url, ['user_id' => $marshal->id])->assertUnprocessable();
+    withAuthCookies($cookies)->deleteJson("/api/requirements/{$requirement->id}")->assertUnprocessable();
 
     withAuthCookies($cookies)->deleteJson("/api/assignments/{$id}")->assertNoContent();
-    expect(Assignment::query()->count())->toBe(0);
+    withAuthCookies($cookies)->deleteJson("/api/requirements/{$requirement->id}")->assertNoContent();
+    expect(Assignment::query()->count())->toBe(0)->and(DutyRequirement::query()->count())->toBe(0);
 });
 
-it('keeps assigning away from non-admins', function () {
+it('keeps requirements and assigning away from non-admins', function () {
     $marshal = User::factory()->role(RoleCode::Marshal)->create();
     $event = Event::factory()->create();
-    $task = DutyType::query()->firstOrFail();
+    $requirement = $event->requirements()->create(requirementPayload($event));
     $cookies = loginCookies($marshal);
 
-    withAuthCookies($cookies)->postJson("/api/events/{$event->id}/assignments", ['user_id' => $marshal->id, 'duty_type_id' => $task->id])->assertForbidden();
-    withAuthCookies($cookies)->getJson("/api/events/{$event->id}/candidates")->assertForbidden();
+    withAuthCookies($cookies)->postJson("/api/events/{$event->id}/requirements", requirementPayload($event))->assertForbidden();
+    withAuthCookies($cookies)->deleteJson("/api/requirements/{$requirement->id}")->assertForbidden();
+    withAuthCookies($cookies)->postJson("/api/requirements/{$requirement->id}/assignments", ['user_id' => $marshal->id])->assertForbidden();
+    withAuthCookies($cookies)->getJson("/api/requirements/{$requirement->id}/candidates")->assertForbidden();
     withAuthCookies($cookies)->getJson("/api/events/{$event->id}")->assertForbidden();
+    withAuthCookies($cookies)->postJson("/api/events/{$event->id}/publish")->assertForbidden();
+    withAuthCookies($cookies)->postJson("/api/events/{$event->id}/cancel")->assertForbidden();
+});
+
+it('publishes a draft event and cancels it, with audit rows', function () {
+    $admin = User::factory()->role(RoleCode::Admin)->create();
+    $event = Event::factory()->create(['status' => 'draft']);
+    $cookies = loginCookies($admin);
+
+    withAuthCookies($cookies)->postJson("/api/events/{$event->id}/publish")->assertOk()->assertJsonPath('data.status', 'published');
+    withAuthCookies($cookies)->postJson("/api/events/{$event->id}/publish")->assertUnprocessable();
+    withAuthCookies($cookies)->postJson("/api/events/{$event->id}/cancel")->assertOk()->assertJsonPath('data.status', 'cancelled');
+    withAuthCookies($cookies)->postJson("/api/events/{$event->id}/cancel")->assertUnprocessable();
+
+    expect(AuditLog::query()->whereIn('action', ['event.published', 'event.cancelled'])->count())->toBe(2);
+});
+
+it('shows a person only their own duties on published events', function () {
+    $one = User::factory()->role(RoleCode::Marshal)->create();
+    $two = User::factory()->role(RoleCode::Volunteer)->create();
+    $published = Event::factory()->create(['status' => 'published']);
+    $draft = Event::factory()->create(['status' => 'draft']);
+    foreach ([[$published, $one], [$published, $two], [$draft, $one]] as [$event, $user]) {
+        $req = $event->requirements()->create(requirementPayload($event, ['role' => $user->role->code]));
+        $req->assignments()->create(['event_id' => $event->id, 'user_id' => $user->id, 'duty_type_id' => $req->duty_type_id]);
+    }
+
+    withAuthCookies(loginCookies($one))->getJson('/api/me/assignments')
+        ->assertOk()->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.event.id', $published->id);
+    withAuthCookies(loginCookies($two))->getJson('/api/me/assignments')
+        ->assertOk()->assertJsonCount(1, 'data');
+});
+
+it('keeps my assignments away from signed out visitors', function () {
+    $this->getJson('/api/me/assignments')->assertUnauthorized();
 });
