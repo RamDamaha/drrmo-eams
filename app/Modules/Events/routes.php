@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Events\Http\Controllers\AcknowledgeController;
 use App\Modules\Events\Http\Controllers\AssignmentController;
+use App\Modules\Events\Http\Controllers\CalendarController;
 use App\Modules\Events\Http\Controllers\DashboardController;
 use App\Modules\Events\Http\Controllers\EventController;
 use App\Modules\Events\Http\Controllers\EventNoticeController;
@@ -16,6 +17,7 @@ Route::get('/event-lookups', LookupController::class);
 
 Route::get('/events', [EventController::class, 'index']);
 Route::post('/events', [EventController::class, 'store']);
+Route::get('/events/calendar', CalendarController::class);
 Route::get('/events/{event}', [EventController::class, 'show']);
 Route::put('/events/{event}', [EventController::class, 'update']);
 Route::post('/events/{event}/publish', [EventController::class, 'publish']);

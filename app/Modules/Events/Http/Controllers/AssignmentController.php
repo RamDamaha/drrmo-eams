@@ -31,7 +31,7 @@ class AssignmentController
             ->where('account_status', 'active')
             ->whereNull('disabled_at')
             ->whereHas('role', fn ($q) => $q->where('code', $requirement->role))
-            ->whereNotIn('id', Assignment::query()->where('event_id', $requirement->event_id)->select('user_id'))
+            ->whereNotIn('id', Assignment::query()->where('event_id', $requirement->event_id)->where('status', '!=', 'cancelled')->select('user_id'))
             ->orderBy('first_name')->orderBy('last_name')
             ->get();
 
@@ -48,13 +48,24 @@ class AssignmentController
         /** @var User $actor */
         $actor = $request->user();
         $override = $requirement->isFull() ? $request->validated('override_reason') : null;
-        $assignment = $requirement->assignments()->create([
-            'event_id' => $requirement->event_id,
-            'user_id' => $request->validated('user_id'),
+        $fields = [
+            'requirement_id' => $requirement->id,
             'duty_type_id' => $requirement->duty_type_id,
             'assigned_by' => $actor->id,
+            'status' => AssignmentStatus::Assigned,
+            'acknowledged_at' => null,
+            'cancelled_at' => null,
+            'cancel_reason' => null,
             'override_reason' => $override,
-        ]);
+        ];
+        // A person taken off this event earlier keeps one row (one per person per event). Bring it back.
+        $assignment = Assignment::query()->where('event_id', $requirement->event_id)
+            ->where('user_id', $request->validated('user_id'))->where('status', AssignmentStatus::Cancelled->value)->first();
+        if ($assignment) {
+            $assignment->update($fields);
+        } else {
+            $assignment = $requirement->assignments()->create([...$fields, 'event_id' => $requirement->event_id, 'user_id' => $request->validated('user_id')]);
+        }
         $audit->log('assignment.created', $assignment, meta: array_filter([
             'event_id' => $requirement->event_id,
             'requirement_id' => $requirement->id,

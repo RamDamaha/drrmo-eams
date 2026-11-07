@@ -30,7 +30,7 @@ class StoreAssignmentRequest extends FormRequest
             'user_id' => ['required', 'integer', Rule::exists('users', 'id')->where(
                 fn ($q) => $q->where('account_status', 'active')->whereNull('disabled_at')
                     ->whereIn('role_id', fn ($r) => $r->select('id')->from('roles')->where('code', $requirement->role)),
-            ), Rule::unique('assignments', 'user_id')->where('event_id', $requirement->event_id)],
+            ), Rule::unique('assignments', 'user_id')->where(fn ($q) => $q->where('event_id', $requirement->event_id)->where('status', '!=', 'cancelled'))],
             // Needed only when the duty is already full.
             'override_reason' => ['nullable', 'string', 'min:5', 'max:500'],
         ];

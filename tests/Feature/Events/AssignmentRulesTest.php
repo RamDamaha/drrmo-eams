@@ -237,3 +237,48 @@ it('gives coordinators read only notices for their department or campus wide', f
     }
     withAuthCookies(loginCookies($volunteer))->getJson('/api/me/event-notices')->assertForbidden();
 });
+
+it('lets a cancelled person be added to the event again', function () {
+    $admin = User::factory()->role(RoleCode::Admin)->create();
+    $marshal = User::factory()->role(RoleCode::Marshal)->create();
+    $event = Event::factory()->create();
+    $req = $event->requirements()->create(shift($event));
+    $old = assignTo($req, $marshal, ['status' => 'cancelled', 'cancel_reason' => 'Was sick']);
+    $cookies = loginCookies($admin);
+
+    withAuthCookies($cookies)->getJson("/api/requirements/{$req->id}/candidates")->assertJsonCount(1, 'data');
+    withAuthCookies($cookies)->postJson("/api/requirements/{$req->id}/assignments", ['user_id' => $marshal->id])->assertCreated();
+
+    expect(Assignment::query()->count())->toBe(1)
+        ->and($old->fresh()->status->value)->toBe('assigned')
+        ->and($old->fresh()->cancel_reason)->toBeNull();
+});
+
+it('completes published events once they have ended', function () {
+    $ended = Event::factory()->create(['status' => 'published', 'starts_at' => now()->subDay(), 'ends_at' => now()->subHours(2)]);
+    $running = Event::factory()->create(['status' => 'published', 'starts_at' => now()->subHour(), 'ends_at' => now()->addHour()]);
+    $draft = Event::factory()->create(['status' => 'draft', 'starts_at' => now()->subDay(), 'ends_at' => now()->subHours(2)]);
+
+    $this->artisan('events:complete-ended')->assertSuccessful();
+
+    expect($ended->fresh()->status->value)->toBe('completed')
+        ->and($running->fresh()->status->value)->toBe('published')
+        ->and($draft->fresh()->status->value)->toBe('draft')
+        ->and(AuditLog::query()->where('action', 'event.completed')->count())->toBe(1);
+});
+
+it('gives the admin events inside a date range for the calendar', function () {
+    $admin = User::factory()->role(RoleCode::Admin)->create();
+    $marshal = User::factory()->role(RoleCode::Marshal)->create();
+    $inside = Event::factory()->create(['title' => 'Inside', 'starts_at' => '2026-12-10 01:00:00', 'ends_at' => '2026-12-10 09:00:00']);
+    Event::factory()->create(['title' => 'Outside', 'starts_at' => '2027-02-10 01:00:00', 'ends_at' => '2027-02-10 09:00:00']);
+    assignTo($inside->requirements()->create(shift($inside, ['headcount' => 3])), $marshal);
+
+    $response = withAuthCookies(loginCookies($admin))->getJson('/api/events/calendar?from=2026-12-01T00:00:00Z&to=2027-01-01T00:00:00Z')->assertOk();
+
+    expect($response->json('data'))->toHaveCount(1)
+        ->and($response->json('data.0.title'))->toBe('Inside')
+        ->and($response->json('data.0.people_count'))->toBe(1)
+        ->and($response->json('data.0.places_needed'))->toBe(3);
+    withAuthCookies(loginCookies($marshal))->getJson('/api/events/calendar?from=2026-12-01&to=2027-01-01')->assertForbidden();
+});
