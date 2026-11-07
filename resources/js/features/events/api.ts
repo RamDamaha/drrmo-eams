@@ -98,11 +98,15 @@ export interface NewRequirement {
     instructions: string;
 }
 
-export async function createRequirement(eventId: number, input: NewRequirement): Promise<void> {
-    await api(`/api/events/${eventId}/requirements`, {
+export async function createRequirement(
+    eventId: number,
+    input: NewRequirement,
+): Promise<Requirement> {
+    const body = await api<{ data: Requirement }>(`/api/events/${eventId}/requirements`, {
         method: 'POST',
         body: JSON.stringify(input),
     });
+    return body.data;
 }
 
 export async function removeRequirement(id: number): Promise<void> {

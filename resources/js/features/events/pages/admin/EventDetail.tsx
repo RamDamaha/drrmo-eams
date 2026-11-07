@@ -391,6 +391,196 @@ interface AddProps {
     onClose: () => void;
 }
 
+// Step 2 of adding a duty: tick the people for it, in the same card.
+function PickPeople({ requirement, onDone }: { requirement: Requirement; onDone: () => void }) {
+    const queryClient = useQueryClient();
+    const labels = roleLabels[requirement.role];
+    const limit = requirement.headcount;
+    const headingId = `pick-${requirement.id}-heading`;
+    const [chosen, setChosen] = useState<number[]>([]);
+    const [search, setSearch] = useState('');
+    const [error, setError] = useState<string | null>(null);
+
+    const candidates = useQuery({
+        queryKey: ['requirement-candidates', requirement.id],
+        queryFn: () => listCandidates(requirement.id),
+    });
+
+    const refresh = () =>
+        Promise.all([
+            queryClient.invalidateQueries({ queryKey: ['event'] }),
+            queryClient.invalidateQueries({ queryKey: ['requirement-candidates'] }),
+        ]);
+
+    const assign = useMutation({
+        mutationFn: async () => {
+            for (const userId of chosen) {
+                await assignPerson(requirement.id, userId);
+            }
+        },
+        onSuccess: async () => {
+            await refresh();
+            onDone();
+        },
+        onError: async (failure) => {
+            setError(failMessage(failure));
+            setChosen([]);
+            await refresh();
+        },
+    });
+
+    const people = (candidates.data ?? []).filter((person) => person.role === requirement.role);
+    const term = search.trim().toLowerCase();
+    const shown = term
+        ? people.filter((person) => person.name.toLowerCase().includes(term))
+        : people;
+    const full = chosen.length >= limit;
+
+    function toggle(id: number) {
+        setError(null);
+        setChosen((list) =>
+            list.includes(id) ? list.filter((item) => item !== id) : [...list, id],
+        );
+    }
+
+    return (
+        <div
+            role="group"
+            aria-labelledby={headingId}
+            className="border-b border-stone-200 bg-white"
+        >
+            <div className="px-6 pt-5">
+                <p className="text-xs font-semibold tracking-[0.14em] text-stone-500 uppercase">
+                    Step 2 of 2
+                </p>
+                <h3 id={headingId} className="mt-1 font-semibold text-stone-900">
+                    Who will do {dutyName(requirement)}?
+                </h3>
+                <p className="mt-0.5 text-sm text-stone-600 tabular-nums" aria-live="polite">
+                    Pick up to {limit}. {chosen.length} of {limit} picked.
+                </p>
+            </div>
+
+            <div className="space-y-3 px-6 py-4">
+                {people.length > 6 && (
+                    <TextField
+                        id={`${headingId}-search`}
+                        label="Search names"
+                        type="search"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                )}
+
+                {candidates.isPending && (
+                    <div className="space-y-2" aria-busy="true">
+                        <p role="status" className="sr-only">
+                            Loading people...
+                        </p>
+                        {[0, 1, 2].map((row) => (
+                            <div
+                                key={row}
+                                className="h-12 animate-pulse rounded-control bg-stone-200"
+                                aria-hidden="true"
+                            />
+                        ))}
+                    </div>
+                )}
+
+                {candidates.isError && (
+                    <div className="space-y-3">
+                        <Alert tone="error">The people list did not load.</Alert>
+                        <Button
+                            variant="secondary"
+                            size="md"
+                            loading={candidates.isFetching}
+                            onClick={() => void candidates.refetch()}
+                        >
+                            Retry
+                        </Button>
+                    </div>
+                )}
+
+                {candidates.isSuccess && people.length === 0 && (
+                    <p className="rounded-control bg-stone-50 px-4 py-3 text-sm text-stone-600">
+                        No {labels.plural.toLowerCase()} left to add. Everyone active is already on
+                        this event.
+                    </p>
+                )}
+
+                {candidates.isSuccess && people.length > 0 && (
+                    <ul className="max-h-72 divide-y divide-stone-100 overflow-y-auto rounded-control ring-1 ring-stone-200">
+                        {shown.map((person) => {
+                            const checked = chosen.includes(person.id);
+                            const disabled = !checked && full;
+                            return (
+                                <li key={person.id}>
+                                    <label
+                                        className={`flex min-h-12 items-center gap-3 px-4 py-2 transition-colors ${checked ? 'bg-maroon-50' : ''} ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-stone-50'}`}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={checked}
+                                            disabled={disabled || assign.isPending}
+                                            onChange={() => toggle(person.id)}
+                                            className="size-4 shrink-0 accent-maroon-700"
+                                        />
+                                        <span
+                                            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-maroon-50 text-xs font-semibold text-maroon-800"
+                                            aria-hidden="true"
+                                        >
+                                            {initials(person.name)}
+                                        </span>
+                                        <span className="min-w-0 truncate font-medium text-stone-900">
+                                            {person.name}
+                                        </span>
+                                    </label>
+                                </li>
+                            );
+                        })}
+                        {shown.length === 0 && (
+                            <li className="px-4 py-3 text-sm text-stone-500">
+                                No names match that search.
+                            </li>
+                        )}
+                    </ul>
+                )}
+            </div>
+
+            <div className="space-y-3 px-6 pb-5">
+                {error && <Alert tone="error">{error}</Alert>}
+                <div className="flex flex-wrap items-center justify-end gap-3">
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        size="md"
+                        disabled={assign.isPending}
+                        onClick={onDone}
+                    >
+                        {chosen.length ? 'Cancel' : 'Skip for now'}
+                    </Button>
+                    <Button
+                        type="button"
+                        size="md"
+                        loading={assign.isPending}
+                        disabled={chosen.length === 0}
+                        onClick={() => {
+                            setError(null);
+                            assign.mutate();
+                        }}
+                    >
+                        {assign.isPending
+                            ? 'Assigning...'
+                            : chosen.length
+                              ? `Assign ${chosen.length} ${chosen.length === 1 ? labels.one : labels.plural.toLowerCase()}`
+                              : 'Assign'}
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // A new duty for one role. The shift starts as the whole event, so most duties need no time change.
 function AddDuty({ event, role, taskTypes, onClose }: AddProps) {
     const queryClient = useQueryClient();
@@ -405,6 +595,7 @@ function AddDuty({ event, role, taskTypes, onClose }: AddProps) {
     const [endsAt, setEndsAt] = useState(eventEnd);
     const [instructions, setInstructions] = useState('');
     const [formError, setFormError] = useState<string | null>(null);
+    const [created, setCreated] = useState<Requirement | null>(null);
     const prefix = `${role}-new`;
 
     const save = useMutation({
@@ -418,9 +609,9 @@ function AddDuty({ event, role, taskTypes, onClose }: AddProps) {
                 shift_ends_at: toUtc(endsAt),
                 instructions,
             }),
-        onSuccess: async () => {
+        onSuccess: async (requirement) => {
+            setCreated(requirement);
             await queryClient.invalidateQueries({ queryKey: ['event', event.id] });
-            onClose();
         },
         onError: (failure) => {
             const body =
@@ -445,6 +636,8 @@ function AddDuty({ event, role, taskTypes, onClose }: AddProps) {
         save.mutate();
     }
 
+    if (created) return <PickPeople requirement={created} onDone={onClose} />;
+
     return (
         <form
             onSubmit={submit}
@@ -452,11 +645,14 @@ function AddDuty({ event, role, taskTypes, onClose }: AddProps) {
             className="border-b border-stone-200 bg-white"
         >
             <div className="px-6 pt-5">
-                <h3 id={`${prefix}-heading`} className="font-semibold text-stone-900">
+                <p className="text-xs font-semibold tracking-[0.14em] text-stone-500 uppercase">
+                    Step 1 of 2
+                </p>
+                <h3 id={`${prefix}-heading`} className="mt-1 font-semibold text-stone-900">
                     New {labels.one} duty
                 </h3>
                 <p className="mt-0.5 text-sm text-stone-600">
-                    Say what is needed. You assign people after you save.
+                    Say what is needed. Next, you pick the people.
                 </p>
             </div>
             <div className={`grid gap-4 px-6 py-5 sm:grid-cols-2 ${pickerClass}`}>
@@ -558,7 +754,7 @@ function AddDuty({ event, role, taskTypes, onClose }: AddProps) {
                         Cancel
                     </Button>
                     <Button type="submit" size="md" loading={save.isPending}>
-                        {save.isPending ? 'Saving...' : 'Save duty'}
+                        {save.isPending ? 'Saving...' : 'Save and pick people'}
                     </Button>
                 </div>
             </div>

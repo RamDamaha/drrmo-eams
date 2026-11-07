@@ -2,7 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { listEvents } from '@/features/events/api';
-import { CalendarIcon, PlusIcon } from '@/features/events/components/icons';
+import { CalendarIcon, PlusIcon, SlidersIcon } from '@/features/events/components/icons';
 import { chipClass, schedule, statuses } from '@/features/events/format';
 import { Alert } from '@/shared/ui/Alert';
 import { Button } from '@/shared/ui/Button';
@@ -119,7 +119,7 @@ export function Events() {
                                         Status
                                     </th>
                                     <th scope="col" className={headCell}>
-                                        <span className="sr-only">Personnel</span>
+                                        <span className="sr-only">Actions</span>
                                     </th>
                                 </tr>
                             </thead>
@@ -166,9 +166,11 @@ export function Events() {
                                             <td className="px-5 py-3.5 text-right whitespace-nowrap">
                                                 <Link
                                                     to={`/admin/events/${event.id}`}
-                                                    className="inline-flex min-h-9 items-center rounded-control border border-stone-300 bg-white px-3 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-50"
+                                                    aria-label={`Configure duties and people for ${event.title}`}
+                                                    className="inline-flex min-h-9 items-center gap-1.5 rounded-control border border-stone-300 bg-white px-3 text-sm font-semibold text-stone-800 transition-colors hover:border-maroon-700 hover:bg-maroon-50 hover:text-maroon-800"
                                                 >
-                                                    Assign people
+                                                    <SlidersIcon className="size-4" />
+                                                    Configure
                                                 </Link>
                                             </td>
                                         </tr>
