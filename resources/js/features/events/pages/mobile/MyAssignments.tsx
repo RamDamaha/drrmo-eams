@@ -1,9 +1,15 @@
 // M-Duties (S1.5). A marshal or volunteer sees their own duties: event, time, place, duty type.
 // Mobile first at 360 px: one column, date block on the left, whole card readable at a glance.
+// A List and Calendar switch shows the same duties on a month calendar.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { acknowledgeAssignment, listMyAssignments, type MyAssignment } from '@/features/events/api';
 import { DateBlock } from '@/features/events/components/DateBlock';
+import {
+    PersonalCalendar,
+    ShowSwitch,
+    useShowCalendar,
+} from '@/features/events/components/PersonalCalendar';
 import { CheckIcon, ClipboardIcon, ClockIcon, PinIcon } from '@/features/events/components/icons';
 import { assignmentStatuses, chipClass } from '@/features/events/format';
 import { Alert } from '@/shared/ui/Alert';
@@ -196,8 +202,19 @@ function Skeleton() {
     );
 }
 
+// Dot on the calendar: gray when over or called off, then by where the person stands.
+function dutyDot(duty: MyAssignment, now: number) {
+    if (duty.event.status === 'cancelled' || duty.status === 'cancelled') return 'bg-stone-300';
+    if (new Date(duty.ends_at).getTime() < now) return 'bg-stone-400';
+    if (duty.status === 'on_duty') return 'bg-ember-500';
+    if (duty.status === 'assigned') return 'bg-sky-600';
+    if (duty.status === 'acknowledged') return 'bg-green-600';
+    return 'bg-maroon-700';
+}
+
 export function MyAssignments() {
     const duties = useQuery({ queryKey: ['my-assignments'], queryFn: listMyAssignments });
+    const showCalendar = useShowCalendar();
 
     const [now] = useState(() => Date.now());
     const all = duties.data ?? [];
@@ -257,7 +274,29 @@ export function MyAssignments() {
                 </div>
             )}
 
-            {duties.isSuccess && all.length > 0 && (
+            {duties.isSuccess && all.length > 0 && <ShowSwitch />}
+
+            {duties.isSuccess && all.length > 0 && showCalendar && (
+                <PersonalCalendar
+                    items={all}
+                    noun="duty"
+                    nouns="duties"
+                    dotTone={(duty) => dutyDot(duty, now)}
+                    renderDay={(onDay) => (
+                        <ul className="mt-3 grid gap-3">
+                            {onDay.map((duty) => (
+                                <DutyCard
+                                    key={duty.id}
+                                    duty={duty}
+                                    ended={new Date(duty.ends_at).getTime() < now}
+                                />
+                            ))}
+                        </ul>
+                    )}
+                />
+            )}
+
+            {duties.isSuccess && all.length > 0 && !showCalendar && (
                 <>
                     {upcoming.length > 0 ? (
                         <DutyList title="Upcoming" duties={upcoming} />

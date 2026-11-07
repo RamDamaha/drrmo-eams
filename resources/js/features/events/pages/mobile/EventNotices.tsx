@@ -1,8 +1,14 @@
 // M-Notices (S2.8). A coordinator reads published events for their department or campus wide.
 // Read only. Mobile first at 360 px: one column of cards, two columns from 1024 px.
+// A List and Calendar switch shows the same notices on a month calendar.
 import { useQuery } from '@tanstack/react-query';
 import { listEventNotices, type EventNotice } from '@/features/events/api';
 import { DateBlock } from '@/features/events/components/DateBlock';
+import {
+    PersonalCalendar,
+    ShowSwitch,
+    useShowCalendar,
+} from '@/features/events/components/PersonalCalendar';
 import { ClockIcon, MegaphoneIcon, PinIcon } from '@/features/events/components/icons';
 import { Alert } from '@/shared/ui/Alert';
 import { Button } from '@/shared/ui/Button';
@@ -110,6 +116,7 @@ function Skeleton() {
 
 export function EventNotices() {
     const notices = useQuery({ queryKey: ['event-notices'], queryFn: listEventNotices });
+    const showCalendar = useShowCalendar();
 
     return (
         <div>
@@ -152,7 +159,25 @@ export function EventNotices() {
                 </div>
             )}
 
-            {notices.isSuccess && notices.data.length > 0 && (
+            {notices.isSuccess && notices.data.length > 0 && <ShowSwitch />}
+
+            {notices.isSuccess && notices.data.length > 0 && showCalendar && (
+                <PersonalCalendar
+                    items={notices.data}
+                    noun="event"
+                    nouns="events"
+                    dotTone={() => 'bg-maroon-700'}
+                    renderDay={(onDay) => (
+                        <ul className="mt-3 grid gap-3">
+                            {onDay.map((notice) => (
+                                <NoticeCard key={notice.id} notice={notice} />
+                            ))}
+                        </ul>
+                    )}
+                />
+            )}
+
+            {notices.isSuccess && notices.data.length > 0 && !showCalendar && (
                 <ul className="mt-6 grid gap-3 lg:grid-cols-2">
                     {notices.data.map((notice) => (
                         <NoticeCard key={notice.id} notice={notice} />

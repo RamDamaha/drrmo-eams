@@ -57,7 +57,11 @@ export function shiftAnchor(view: CalendarView, anchor: Date, by: number): Date 
     return new Date(anchor.getFullYear(), anchor.getMonth() + by, Math.min(anchor.getDate(), last));
 }
 
-export function touchesDay(event: CalendarEvent, day: Date): boolean {
+// Works for anything with a start and an end: calendar events, duties and notices.
+export function touchesDay(
+    event: Pick<CalendarEvent, 'starts_at' | 'ends_at'>,
+    day: Date,
+): boolean {
     return new Date(event.starts_at) < addDays(day, 1) && new Date(event.ends_at) > day;
 }
 
