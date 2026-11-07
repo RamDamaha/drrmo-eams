@@ -1,5 +1,6 @@
 import type { RouteObject } from 'react-router';
 import { useMe } from '@/app/auth';
+import { Calendar } from './pages/admin/Calendar';
 import { Dashboard } from './pages/admin/Dashboard';
 import { Events } from './pages/admin/Events';
 import { EventNotices } from './pages/mobile/EventNotices';
@@ -19,6 +20,7 @@ export const dashboardRoute: RouteObject = { index: true, element: <Dashboard />
 
 // Added to the admin layout in the Core router.
 export const adminEventRoutes: RouteObject[] = [
+    { path: 'calendar', element: <Calendar /> },
     { path: 'events', element: <Events /> },
     { path: 'events/new', element: <NewEvent /> },
     { path: 'events/:id/edit', element: <NewEvent /> },

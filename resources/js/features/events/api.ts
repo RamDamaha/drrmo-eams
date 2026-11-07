@@ -227,3 +227,21 @@ export async function listEventNotices(): Promise<EventNotice[]> {
     const body = await api<{ data: EventNotice[] }>('/api/me/event-notices');
     return body.data;
 }
+
+export interface CalendarEvent {
+    id: number;
+    title: string;
+    status: EventSummary['status'];
+    event_type: { value: string; label: string };
+    location: string | null;
+    starts_at: string;
+    ends_at: string;
+    people_count: number;
+    places_needed: number;
+}
+
+export async function getCalendar(from: string, to: string): Promise<CalendarEvent[]> {
+    const query = new URLSearchParams({ from, to });
+    const body = await api<{ data: CalendarEvent[] }>(`/api/events/calendar?${query.toString()}`);
+    return body.data;
+}
