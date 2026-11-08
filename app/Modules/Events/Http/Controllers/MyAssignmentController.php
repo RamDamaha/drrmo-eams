@@ -29,6 +29,8 @@ class MyAssignmentController
             'id' => $a->id,
             'status' => $a->status->value,
             'acknowledged_at' => $a->acknowledged_at?->toIso8601String(),
+            'duty_started_at' => $a->duty_started_at?->toIso8601String(),
+            'duty_ended_at' => $a->duty_ended_at?->toIso8601String(),
             'event' => [
                 'id' => $a->event->id,
                 'title' => $a->event->title,

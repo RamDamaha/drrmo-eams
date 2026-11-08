@@ -168,3 +168,11 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Decision and why: `SignOutButton` takes optional children so the sidebar can show an icon with the label. Its behavior did not change
 - Evidence: resources/js/layouts/AdminLayout.test.tsx
 - Paper: Chapter 3 (user interface design)
+
+## 2026-11-08 · S4.1 Start and end duty (monitoring)
+- What was built: `POST /api/me/assignments/{assignment}/start-duty` and `end-duty`, the `AssignmentLookup` contract in Events, the `monitoring:auto-end-duty` command (every five minutes), and Start duty and End duty buttons on the mobile duty card
+- Decision and why: start opens 15 minutes before the shift and closes at shift end. It needs an active availability status and location consent, so a person who has not agreed to tracking is never put on duty
+- Decision and why: Monitoring changes the assignment only through `AssignmentLookup`, as MODULES.md requires. The auto end uses the same contract and is audited with source `system`
+- Problem met and fix: `duty_started_at` and `duty_ended_at` were planned in DATABASE.md (G1) but missing, so migration 300008 adds them
+- Evidence: tests/Feature/Monitoring/DutyTest.php
+- Paper: Chapter 3 (system design), Chapter 4 (privacy by design)

@@ -151,6 +151,8 @@ export interface MyAssignment {
     id: number;
     status: Assignment['status'];
     acknowledged_at: string | null;
+    duty_started_at: string | null;
+    duty_ended_at: string | null;
     event: { id: number; title: string; status: string; location: string | null };
     duty_type: string | null;
     team_needed: string | null;

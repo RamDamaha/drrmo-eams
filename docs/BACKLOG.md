@@ -147,6 +147,7 @@ Tags: module (`core`, `personnel`, `access`, `events`, `notifications`, `monitor
 **S4.1 Start and end duty** `monitoring` `mobile` **M**
 - Start allowed from 15 minutes before shift start. Requires location consent and active status.
 - End sets completed and duty_ended_at. Auto end 30 minutes after shift end.
+- Done: start and end endpoints, `AssignmentLookup`, auto end command, and Start and End buttons on the duty card.
 
 **S4.2 Ping engine with offline queue** `monitoring` `mobile` **L**
 - Sends a point about every 30 seconds while on duty and the page is open.
