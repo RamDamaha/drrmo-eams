@@ -17,6 +17,60 @@ Tags: module (`core`, `personnel`, `access`, `events`, `notifications`, `monitor
 | E5 Information | M5 | information |
 | E6 Records and launch | M6 | records, core |
 
+## Status
+
+Checked against the code. Done, Partial or Not started. Update this table when a story merges.
+
+| Story | Title | Status |
+|---|---|---|
+| S0.1 | Repository, CI and quality tools | Done |
+| S0.2 | App shell with two layouts | Done |
+| S0.3 | Roles and permissions seeded | Done |
+| S0.4 | Audit and consent contracts stubbed | Done |
+| S1.1 | Log in and log out | Done |
+| S1.2 | Admin creates an event | Done |
+| S1.3 | Admin adds a duty requirement | Done |
+| S1.4 | Admin assigns a person | Done |
+| S1.5 | Person sees the assignment on a phone | Done |
+| S2.1 | People list and profile | Not started |
+| S2.2 | Import people from CSV | Not started |
+| S2.3 | Emergency contacts | Partial |
+| S2.4 | Volunteer active and inactive toggle | Partial |
+| S2.5 | Privacy notice and consent | Partial |
+| S2.6 | Permission check with grants | Not started |
+| S2.7 | Grants manager | Not started |
+| S2.8 | Coordinator event notices | Done |
+| S3.1 | Assignment conflict checks | Partial |
+| S3.2 | Acknowledge | Done |
+| S3.3 | Edit and cancel assignments | Done |
+| S3.4 | Email on assignment created, changed, cancelled | Not started |
+| S3.5 | Shift reminders | Not started |
+| S3.6 | Notification log | Not started |
+| S3.7 | Admin dashboard | Done |
+| S3.8 | No-show marking | Done |
+| S3.9 | Calendar view | Done |
+| S4.1 | Start and end duty | Done |
+| S4.2 | Ping engine with offline queue | Not started |
+| S4.3 | Live map | Not started |
+| S4.4 | Ping trail | Not started |
+| S4.5 | Report slots | Not started |
+| S4.6 | Report form | Not started |
+| S4.7 | Overdue alerts | Not started |
+| S4.8 | Report feed | Not started |
+| S4.9 | Ping retention | Not started |
+| S5.1 | Memo manager | Not started |
+| S5.2 | Memo search | Not started |
+| S5.3 | Memo viewer | Not started |
+| S5.4 | Messages | Not started |
+| S6.1 | Audit log viewer | Not started |
+| S6.2 | My data export | Not started |
+| S6.3 | Retention and pruning | Not started |
+| S6.4 | PWA install | Not started |
+| S6.5 | Production deployment | Not started |
+| S6.6 | Field test | Not started |
+
+Partial notes: S2.3 and S2.4 have models only. S2.5 has contracts but no consent screen or `consent_required` 403. S3.1 has the overlap chip and headcount override, but the inactive volunteer block on save is unconfirmed.
+
 ---
 
 ## M0 Foundations
