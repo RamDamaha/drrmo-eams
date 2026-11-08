@@ -15,18 +15,20 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * @property AssignmentStatus $status
  * @property CarbonImmutable|Carbon|null $acknowledged_at
+ * @property CarbonImmutable|Carbon|null $duty_started_at
+ * @property CarbonImmutable|Carbon|null $duty_ended_at
  * @property CarbonImmutable|Carbon|null $cancelled_at
  */
 class Assignment extends Model
 {
     protected $attributes = ['status' => 'assigned'];
 
-    protected $fillable = ['event_id', 'requirement_id', 'user_id', 'duty_type_id', 'assigned_by', 'status', 'acknowledged_at', 'cancelled_at', 'cancel_reason', 'override_reason'];
+    protected $fillable = ['event_id', 'requirement_id', 'user_id', 'duty_type_id', 'assigned_by', 'status', 'acknowledged_at', 'duty_started_at', 'duty_ended_at', 'cancelled_at', 'cancel_reason', 'override_reason'];
 
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['status' => AssignmentStatus::class, 'acknowledged_at' => 'datetime', 'cancelled_at' => 'datetime'];
+        return ['status' => AssignmentStatus::class, 'acknowledged_at' => 'datetime', 'duty_started_at' => 'datetime', 'duty_ended_at' => 'datetime', 'cancelled_at' => 'datetime'];
     }
 
     /**

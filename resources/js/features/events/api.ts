@@ -151,6 +151,8 @@ export interface MyAssignment {
     id: number;
     status: Assignment['status'];
     acknowledged_at: string | null;
+    duty_started_at: string | null;
+    duty_ended_at: string | null;
     event: { id: number; title: string; status: string; location: string | null };
     duty_type: string | null;
     team_needed: string | null;
@@ -190,8 +192,12 @@ export async function acknowledgeAssignment(id: number): Promise<void> {
 export interface DashboardRow {
     id: number;
     person: string;
+    status: Assignment['status'];
     event: { id: number; title: string };
+    duty: string | null;
     starts_at: string | null;
+    ends_at: string | null;
+    duty_started_at: string | null;
 }
 
 export interface Dashboard {
@@ -202,7 +208,10 @@ export interface Dashboard {
         starts_at: string;
         ends_at: string;
         people_count: number;
+        on_duty_count: number;
+        places_needed: number;
     }[];
+    on_duty: DashboardRow[];
     unacknowledged: DashboardRow[];
     not_on_duty: DashboardRow[];
 }

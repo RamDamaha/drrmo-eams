@@ -168,3 +168,27 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Decision and why: `SignOutButton` takes optional children so the sidebar can show an icon with the label. Its behavior did not change
 - Evidence: resources/js/layouts/AdminLayout.test.tsx
 - Paper: Chapter 3 (user interface design)
+
+## 2026-11-08 · S4.1 Start and end duty (monitoring)
+- What was built: `POST /api/me/assignments/{assignment}/start-duty` and `end-duty`, the `AssignmentLookup` contract in Events, the `monitoring:auto-end-duty` command (every five minutes), and Start duty and End duty buttons on the mobile duty card
+- Decision and why: start opens 15 minutes before the shift and closes at shift end. It needs an active availability status and location consent, so a person who has not agreed to tracking is never put on duty
+- Decision and why: Monitoring changes the assignment only through `AssignmentLookup`, as MODULES.md requires. The auto end uses the same contract and is audited with source `system`
+- Problem met and fix: `duty_started_at` and `duty_ended_at` were planned in DATABASE.md (G1) but missing, so migration 300008 adds them
+- Evidence: tests/Feature/Monitoring/DutyTest.php
+- Paper: Chapter 3 (system design), Chapter 4 (privacy by design)
+
+## 2026-11-08 · S3.7 Admin dashboard, on duty pass (events)
+- What was built: the dashboard now shows who is on duty. A fourth count, "On duty now", sits with Events today, Late to start and Not acknowledged. A new "On duty now" panel under Today's events lists each person, their event and duty, and when they started. Each event row shows "3 of 5 on duty" with a thin ember bar while it runs, and "4 of 5 assigned" with a maroon bar before it starts
+- What was built: the Late to start list says how late each person is ("35 min late") and has a Mark no show action with the same confirm dialog as the event page
+- Decision and why: the late list is now accurate, because start duty exists. People on duty or done drop off it, and only those whose duty never started stay
+- Decision and why: `GET /api/dashboard` adds `on_duty`, `on_duty_count`, `places_needed`, and the duty name and status on each person row. No location data is sent, so the dashboard needs no `location.view` grant
+- Evidence: tests/Feature/Events/AssignmentRulesTest.php
+- Paper: Chapter 3 (user interface design)
+
+## 2026-11-08 · S3.7 Admin dashboard, cleaner and phone ready (events)
+- What was built: the four counts became separate cards with a small line icon, two per row on phones and four on desktop. A refresh button sits next to "Updated" time. Today's events has an "All events" link
+- What was built: a Statistics section with four placeholder cards: Attendance, Duty hours, Time to acknowledge and Events by type. They show the layout in gray with "--" values and a "Coming soon" chip, so no one reads made-up numbers as real
+- Decision and why: on phones the Late to start and Not acknowledged lists come first, because those need action. On desktop they sit in the right column. The page order puts them first, so screen readers also reach them first
+- Decision and why: the lists use container queries. In a narrow list the time and actions drop under the name, so names are no longer cut to one letter in the right column. Mark no show is a 40 px outlined button on phones
+- Problem met and fix: the page scrolled sideways on phones because the grid had no column size. `grid-cols-1` and `min-w-0` fixed it
+- Paper: Chapter 3 (user interface design)

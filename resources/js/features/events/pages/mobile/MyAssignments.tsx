@@ -12,6 +12,7 @@ import {
 } from '@/features/events/components/PersonalCalendar';
 import { CheckIcon, ClipboardIcon, ClockIcon, PinIcon } from '@/features/events/components/icons';
 import { assignmentStatuses, chipClass } from '@/features/events/format';
+import { DutyControl } from '@/features/monitoring/components/DutyControl';
 import { Alert } from '@/shared/ui/Alert';
 import { Button } from '@/shared/ui/Button';
 
@@ -137,6 +138,9 @@ function DutyCard({ duty, ended = false }: { duty: MyAssignment; ended?: boolean
                         </Button>
                     </div>
                 )}
+                {!cancelled &&
+                    duty.event.status === 'published' &&
+                    (!ended || duty.status === 'on_duty') && <DutyControl duty={duty} />}
                 {!cancelled && duty.status === 'acknowledged' && duty.acknowledged_at && (
                     <p className="flex items-center gap-2 border-t border-stone-100 px-4 py-3 text-sm text-stone-600">
                         <CheckIcon className="size-4 shrink-0 text-green-700" />

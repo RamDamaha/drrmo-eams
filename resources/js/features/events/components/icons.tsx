@@ -130,3 +130,29 @@ export function ListIcon({ className }: { className?: string }) {
         </Icon>
     );
 }
+
+export function RefreshIcon({ className }: { className?: string }) {
+    return (
+        <Icon className={className}>
+            <path d="M20 11a8 8 0 0 0-14.6-4.5M4 4.5v4h4M4 13a8 8 0 0 0 14.6 4.5M20 19.5v-4h-4" />
+        </Icon>
+    );
+}
+
+export function AlertIcon({ className }: { className?: string }) {
+    return (
+        <Icon className={className}>
+            <path d="M12 4 2.8 19.5h18.4L12 4Z" />
+            <path d="M12 10v4M12 17v.01" />
+        </Icon>
+    );
+}
+
+export function ChartIcon({ className }: { className?: string }) {
+    return (
+        <Icon className={className}>
+            <path d="M4 4v16h16" />
+            <path d="M8 16v-4M12 16V8M16 16v-6" />
+        </Icon>
+    );
+}
