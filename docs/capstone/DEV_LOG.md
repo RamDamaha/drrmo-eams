@@ -176,3 +176,11 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Problem met and fix: `duty_started_at` and `duty_ended_at` were planned in DATABASE.md (G1) but missing, so migration 300008 adds them
 - Evidence: tests/Feature/Monitoring/DutyTest.php
 - Paper: Chapter 3 (system design), Chapter 4 (privacy by design)
+
+## 2026-11-08 · S3.7 Admin dashboard, on duty pass (events)
+- What was built: the dashboard now shows who is on duty. A fourth count, "On duty now", sits with Events today, Late to start and Not acknowledged. A new "On duty now" panel under Today's events lists each person, their event and duty, and when they started. Each event row shows "3 of 5 on duty" with a thin ember bar while it runs, and "4 of 5 assigned" with a maroon bar before it starts
+- What was built: the Late to start list says how late each person is ("35 min late") and has a Mark no show action with the same confirm dialog as the event page
+- Decision and why: the late list is now accurate, because start duty exists. People on duty or done drop off it, and only those whose duty never started stay
+- Decision and why: `GET /api/dashboard` adds `on_duty`, `on_duty_count`, `places_needed`, and the duty name and status on each person row. No location data is sent, so the dashboard needs no `location.view` grant
+- Evidence: tests/Feature/Events/AssignmentRulesTest.php
+- Paper: Chapter 3 (user interface design)

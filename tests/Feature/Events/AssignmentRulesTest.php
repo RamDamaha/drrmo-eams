@@ -221,6 +221,25 @@ it('shows the admin dashboard with today, unacknowledged and late people', funct
         ->assertJsonCount(2, 'data.not_on_duty');
 });
 
+it('moves people who started duty from the late list to the on duty list', function () {
+    $admin = User::factory()->role(RoleCode::Admin)->create();
+    $working = User::factory()->role(RoleCode::Marshal)->create();
+    $missing = User::factory()->role(RoleCode::Marshal)->create();
+    $event = Event::factory()->create(['status' => 'published', 'starts_at' => now()->subHour(), 'ends_at' => now()->addHours(5)]);
+    $req = $event->requirements()->create(shift($event, ['headcount' => 3]));
+    $on = assignTo($req, $working, ['status' => 'on_duty', 'duty_started_at' => now()->subMinutes(50)]);
+    $off = assignTo($req, $missing, ['status' => 'acknowledged', 'acknowledged_at' => now()->subDay()]);
+
+    withAuthCookies(loginCookies($admin))->getJson('/api/dashboard')->assertOk()
+        ->assertJsonPath('data.today_events.0.on_duty_count', 1)
+        ->assertJsonPath('data.today_events.0.places_needed', 3)
+        ->assertJsonCount(1, 'data.on_duty')
+        ->assertJsonPath('data.on_duty.0.id', $on->id)
+        ->assertJsonPath('data.on_duty.0.status', 'on_duty')
+        ->assertJsonCount(1, 'data.not_on_duty')
+        ->assertJsonPath('data.not_on_duty.0.id', $off->id);
+});
+
 it('gives coordinators read only notices for their department or campus wide', function () {
     $coordinator = User::factory()->role(RoleCode::Coordinator)->create();
     $volunteer = User::factory()->role(RoleCode::Volunteer)->create();

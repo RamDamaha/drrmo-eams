@@ -1,10 +1,11 @@
-// A-Dashboard (S3.7). Today at a glance: counts on top, today's events on the left,
-// and the two people lists that need follow up on the right. Refreshes every minute.
-import { useQuery } from '@tanstack/react-query';
+// A-Dashboard (S3.7). Today at a glance: counts on top, today's events and who is on duty
+// on the left, and the two people lists that need follow up on the right. Refreshes every minute.
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import {
     getDashboard,
+    markNoShow,
     type Dashboard as DashboardData,
     type DashboardRow,
 } from '@/features/events/api';
@@ -16,8 +17,10 @@ import {
     PinIcon,
 } from '@/features/events/components/icons';
 import { chipClass } from '@/features/events/format';
+import { ApiError } from '@/shared/api/client';
 import { Alert } from '@/shared/ui/Alert';
 import { Button } from '@/shared/ui/Button';
+import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
 
 const time = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
 const day = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
@@ -35,30 +38,60 @@ function initials(name: string) {
     ).toUpperCase();
 }
 
-// A shift today reads "8:00 AM". Another day reads "Nov 9, 8:00 AM".
-function shiftStart(iso: string) {
+// A time today reads "8:00 AM". Another day reads "Nov 9, 8:00 AM".
+function when(iso: string) {
     const date = new Date(iso);
     return date.toDateString() === new Date().toDateString()
         ? time.format(date)
         : `${day.format(date)}, ${time.format(date)}`;
 }
 
+// "35 min late" or "1 h 10 min late".
+function lateBy(iso: string, now: number) {
+    const minutes = Math.max(0, Math.floor((now - new Date(iso).getTime()) / 60_000));
+    if (minutes < 60) return `${minutes} min late`;
+    const rest = minutes % 60;
+    return `${Math.floor(minutes / 60)} h${rest > 0 ? ` ${rest} min` : ''} late`;
+}
+
+function failMessage(failure: unknown): string {
+    if (failure instanceof ApiError && failure.status === 422) {
+        const body = failure.body as { message?: string } | null;
+        return body?.message ?? 'That did not work. Refresh and try again.';
+    }
+    return 'That did not work. Check your connection and try again.';
+}
+
+function LiveDot({ pulse = false }: { pulse?: boolean }) {
+    return (
+        <span className="relative flex size-1.5" aria-hidden="true">
+            {pulse && (
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-ember-500 opacity-60" />
+            )}
+            <span className="relative inline-flex size-1.5 rounded-full bg-ember-500" />
+        </span>
+    );
+}
+
 function Stat({
     label,
     value,
     note,
-    urgent = false,
+    tone = 'plain',
 }: {
     label: string;
     value: number;
     note: string;
-    urgent?: boolean;
+    tone?: 'plain' | 'live' | 'urgent';
 }) {
     return (
-        <div className="px-6 py-5">
-            <dt className="text-sm font-medium text-stone-600">{label}</dt>
+        <div className="bg-white px-6 py-5">
+            <dt className="flex items-center gap-2 text-sm font-medium text-stone-600">
+                {tone === 'live' && <LiveDot />}
+                {label}
+            </dt>
             <dd
-                className={`mt-1 text-3xl font-semibold tracking-tight tabular-nums ${urgent ? 'text-ember-700' : 'text-stone-900'}`}
+                className={`mt-1 text-3xl font-semibold tracking-tight tabular-nums ${tone === 'urgent' ? 'text-ember-700' : 'text-stone-900'}`}
             >
                 {value}
             </dd>
@@ -104,7 +137,7 @@ function Panel({
 function AllClear({ icon, text }: { icon: ReactNode; text: string }) {
     return (
         <p className="flex items-center gap-3 border-t border-stone-200 px-6 py-5 text-sm text-stone-600">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-control border border-stone-200 text-green-700">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-control border border-stone-200 text-stone-500">
                 {icon}
             </span>
             {text}
@@ -112,7 +145,14 @@ function AllClear({ icon, text }: { icon: ReactNode; text: string }) {
     );
 }
 
-function PeopleRows({ rows, chip }: { rows: DashboardRow[]; chip: ReactNode }) {
+// One person per row: who, where, and a right side that each list fills in.
+function PeopleRows({
+    rows,
+    aside,
+}: {
+    rows: DashboardRow[];
+    aside: (row: DashboardRow) => ReactNode;
+}) {
     return (
         <ul className="divide-y divide-stone-100 border-t border-stone-200">
             {rows.map((row) => (
@@ -125,24 +165,55 @@ function PeopleRows({ rows, chip }: { rows: DashboardRow[]; chip: ReactNode }) {
                     </span>
                     <div className="min-w-0 flex-1">
                         <p className="truncate font-medium text-stone-900">{row.person}</p>
-                        <Link
-                            to={`/admin/events/${row.event.id}`}
-                            className="block truncate text-sm text-maroon-700 hover:underline"
-                        >
-                            {row.event.title}
-                        </Link>
+                        <p className="truncate text-sm text-stone-600">
+                            <Link
+                                to={`/admin/events/${row.event.id}`}
+                                className="text-maroon-700 hover:underline"
+                            >
+                                {row.event.title}
+                            </Link>
+                            {row.duty && <span className="text-stone-500"> · {row.duty}</span>}
+                        </p>
                     </div>
-                    <div className="flex shrink-0 flex-col items-end gap-1">
-                        {chip}
-                        {row.starts_at && (
-                            <p className="text-xs text-stone-500 tabular-nums">
-                                Shift {shiftStart(row.starts_at)}
-                            </p>
-                        )}
+                    <div className="flex shrink-0 flex-col items-end gap-1 text-right">
+                        {aside(row)}
                     </div>
                 </li>
             ))}
         </ul>
+    );
+}
+
+// How full an event is. While it runs, the bar shows who is on duty. Before, who is assigned.
+function Staffing({
+    event,
+    live,
+}: {
+    event: DashboardData['today_events'][number];
+    live: boolean;
+}) {
+    const total = event.places_needed > 0 ? event.places_needed : event.people_count;
+    const filled = live ? event.on_duty_count : event.people_count;
+    const share = total > 0 ? Math.min(1, filled / total) : 0;
+    return (
+        <div className="w-32 text-right">
+            <p className="flex items-center justify-end gap-1.5 text-sm text-stone-600 tabular-nums">
+                <PeopleIcon className="size-4 text-stone-500" />
+                <span className="font-semibold text-stone-900">{filled}</span>
+                <span>
+                    of {total} {live ? 'on duty' : 'assigned'}
+                </span>
+            </p>
+            <div
+                className="mt-1.5 h-1 overflow-hidden rounded-full bg-stone-200"
+                aria-hidden="true"
+            >
+                <div
+                    className={`h-full rounded-full ${live ? 'bg-ember-500' : 'bg-maroon-700'}`}
+                    style={{ width: `${share * 100}%` }}
+                />
+            </div>
+        </div>
     );
 }
 
@@ -198,32 +269,26 @@ function TodayEvents({ events, now }: { events: DashboardData['today_events']; n
                                     <PinIcon className="size-4 shrink-0 text-stone-500" />
                                     {event.location ?? 'No location set'}
                                 </p>
-                            </div>
-                            <div className="flex shrink-0 items-center gap-4">
-                                {live && (
-                                    <span
-                                        className={`${chipClass} gap-1.5 bg-ember-50 text-ember-700 ring-ember-200`}
-                                    >
-                                        <span
-                                            className="size-1.5 rounded-full bg-ember-500"
-                                            aria-hidden="true"
-                                        />
-                                        Happening now
-                                    </span>
+                                {(live || over) && (
+                                    <p className="mt-1.5">
+                                        {live ? (
+                                            <span
+                                                className={`${chipClass} gap-1.5 bg-ember-50 text-ember-700 ring-ember-200`}
+                                            >
+                                                <LiveDot />
+                                                Happening now
+                                            </span>
+                                        ) : (
+                                            <span
+                                                className={`${chipClass} bg-stone-100 text-stone-600 ring-stone-200`}
+                                            >
+                                                Ended
+                                            </span>
+                                        )}
+                                    </p>
                                 )}
-                                {over && (
-                                    <span
-                                        className={`${chipClass} bg-stone-100 text-stone-600 ring-stone-200`}
-                                    >
-                                        Ended
-                                    </span>
-                                )}
-                                <p className="flex items-center gap-1.5 text-sm text-stone-600 tabular-nums">
-                                    <PeopleIcon className="size-4 text-stone-500" />
-                                    {event.people_count}
-                                    <span className="sr-only">people assigned</span>
-                                </p>
                             </div>
+                            <Staffing event={event} live={live} />
                         </Link>
                     </li>
                 );
@@ -239,11 +304,11 @@ function Skeleton() {
                 Loading the dashboard...
             </p>
             <div
-                className="mt-8 grid grid-cols-3 divide-x divide-stone-200 rounded-card bg-white ring-1 ring-stone-200"
+                className="mt-8 grid gap-px overflow-hidden rounded-card bg-stone-200 ring-1 ring-stone-200 sm:grid-cols-2 lg:grid-cols-4"
                 aria-hidden="true"
             >
-                {[0, 1, 2].map((cell) => (
-                    <div key={cell} className="space-y-2 px-6 py-5">
+                {[0, 1, 2, 3].map((cell) => (
+                    <div key={cell} className="space-y-2 bg-white px-6 py-5">
                         <div className="h-4 w-28 animate-pulse rounded bg-stone-200" />
                         <div className="h-8 w-12 animate-pulse rounded bg-stone-200" />
                     </div>
@@ -266,16 +331,39 @@ function Skeleton() {
 }
 
 export function Dashboard() {
+    const queryClient = useQueryClient();
     const data = useQuery({
         queryKey: ['dashboard'],
         queryFn: getDashboard,
         refetchInterval: 60_000,
     });
     const [today] = useState(() => new Date());
-    // The time of the last refresh, so "Happening now" moves with the data.
+    const [pending, setPending] = useState<DashboardRow | null>(null);
+    const [dialogError, setDialogError] = useState<string | null>(null);
+    const noShow = useMutation({
+        mutationFn: (row: DashboardRow) => markNoShow(row.id),
+        onSuccess: async () => {
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+                queryClient.invalidateQueries({ queryKey: ['event'] }),
+            ]);
+            setPending(null);
+        },
+        onError: (failure) => setDialogError(failMessage(failure)),
+    });
+
+    // The time of the last refresh, so "Happening now" and "late" move with the data.
     const now = data.dataUpdatedAt;
+    const events = data.data?.today_events ?? [];
+    const onDuty = data.data?.on_duty ?? [];
     const late = data.data?.not_on_duty ?? [];
     const waiting = data.data?.unacknowledged ?? [];
+    const liveEvents = events.filter(
+        (event) =>
+            new Date(event.starts_at).getTime() <= now && now < new Date(event.ends_at).getTime(),
+    ).length;
+    const assignedToday = events.reduce((sum, event) => sum + event.people_count, 0);
+    const firstName = pending?.person.split(' ')[0] ?? '';
 
     return (
         <div className="mx-auto max-w-[1440px]">
@@ -314,17 +402,31 @@ export function Dashboard() {
 
             {data.data && (
                 <>
-                    <dl className="mt-8 grid divide-y divide-stone-200 rounded-card bg-white ring-1 ring-stone-200 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                    <dl className="mt-8 grid gap-px overflow-hidden rounded-card bg-stone-200 ring-1 ring-stone-200 sm:grid-cols-2 lg:grid-cols-4">
                         <Stat
                             label="Events today"
-                            value={data.data.today_events.length}
-                            note="Published events only"
+                            value={events.length}
+                            note={
+                                liveEvents > 0
+                                    ? `${liveEvents} happening now`
+                                    : 'Published events only'
+                            }
+                        />
+                        <Stat
+                            label="On duty now"
+                            value={onDuty.length}
+                            note={
+                                assignedToday > 0
+                                    ? `${assignedToday} assigned to today's events`
+                                    : 'Nobody is assigned today'
+                            }
+                            tone={onDuty.length > 0 ? 'live' : 'plain'}
                         />
                         <Stat
                             label="Late to start"
                             value={late.length}
                             note="30 minutes past shift start"
-                            urgent={late.length > 0}
+                            tone={late.length > 0 ? 'urgent' : 'plain'}
                         />
                         <Stat
                             label="Not acknowledged"
@@ -334,13 +436,47 @@ export function Dashboard() {
                     </dl>
 
                     <div className="mt-6 grid items-start gap-6 lg:grid-cols-5">
-                        <div className="lg:col-span-3">
+                        <div className="space-y-6 lg:col-span-3">
                             <Panel
                                 id="today-heading"
                                 title="Today's events"
                                 intro="Open an event to see its duties and people."
                             >
-                                <TodayEvents events={data.data.today_events} now={now} />
+                                <TodayEvents events={events} now={now} />
+                            </Panel>
+
+                            <Panel
+                                id="on-duty-heading"
+                                title="On duty now"
+                                intro="People who started duty and have not ended it."
+                                count={onDuty.length}
+                            >
+                                {onDuty.length === 0 ? (
+                                    <AllClear
+                                        icon={<PeopleIcon className="size-5" />}
+                                        text="Nobody is on duty right now."
+                                    />
+                                ) : (
+                                    <PeopleRows
+                                        rows={onDuty}
+                                        aside={(row) => (
+                                            <>
+                                                <span
+                                                    className={`${chipClass} gap-1.5 bg-ember-50 text-ember-700 ring-ember-200`}
+                                                >
+                                                    <LiveDot pulse />
+                                                    On duty
+                                                </span>
+                                                <p className="text-xs text-stone-500 tabular-nums">
+                                                    {row.duty_started_at &&
+                                                        `Since ${when(row.duty_started_at)}`}
+                                                    {row.ends_at &&
+                                                        `${row.duty_started_at ? ', ' : ''}ends ${time.format(new Date(row.ends_at))}`}
+                                                </p>
+                                            </>
+                                        )}
+                                    />
+                                )}
                             </Panel>
                         </div>
 
@@ -348,7 +484,7 @@ export function Dashboard() {
                             <Panel
                                 id="late-heading"
                                 title="Late to start"
-                                intro="Shift started 30 minutes ago and they are not on duty."
+                                intro="Shift started 30 minutes ago and they have not started duty."
                                 count={late.length}
                             >
                                 {late.length === 0 ? (
@@ -359,13 +495,26 @@ export function Dashboard() {
                                 ) : (
                                     <PeopleRows
                                         rows={late}
-                                        chip={
-                                            <span
-                                                className={`${chipClass} bg-amber-50 text-amber-900 ring-amber-200`}
-                                            >
-                                                Late
-                                            </span>
-                                        }
+                                        aside={(row) => (
+                                            <>
+                                                {row.starts_at && (
+                                                    <p className="text-sm font-semibold text-ember-700 tabular-nums">
+                                                        {lateBy(row.starts_at, now)}
+                                                    </p>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    className="rounded-control text-xs font-semibold text-red-700 hover:underline"
+                                                    onClick={() => {
+                                                        setDialogError(null);
+                                                        setPending(row);
+                                                    }}
+                                                >
+                                                    Mark no show
+                                                    <span className="sr-only">: {row.person}</span>
+                                                </button>
+                                            </>
+                                        )}
                                     />
                                 )}
                             </Panel>
@@ -384,13 +533,20 @@ export function Dashboard() {
                                 ) : (
                                     <PeopleRows
                                         rows={waiting}
-                                        chip={
-                                            <span
-                                                className={`${chipClass} bg-sky-50 text-sky-800 ring-sky-200`}
-                                            >
-                                                Assigned
-                                            </span>
-                                        }
+                                        aside={(row) => (
+                                            <>
+                                                <span
+                                                    className={`${chipClass} bg-sky-50 text-sky-800 ring-sky-200`}
+                                                >
+                                                    Assigned
+                                                </span>
+                                                {row.starts_at && (
+                                                    <p className="text-xs text-stone-500 tabular-nums">
+                                                        Shift {when(row.starts_at)}
+                                                    </p>
+                                                )}
+                                            </>
+                                        )}
                                     />
                                 )}
                             </Panel>
@@ -398,6 +554,22 @@ export function Dashboard() {
                     </div>
                 </>
             )}
+
+            <ConfirmDialog
+                open={pending !== null}
+                title={`Mark ${pending?.person ?? ''} as no show?`}
+                description={`${firstName} did not report for ${pending?.duty ?? 'this duty'} at ${pending?.event.title ?? 'this event'}. Their spot opens so you can fill it. This stays on their record.`}
+                confirmLabel="Mark no show"
+                loadingLabel="Saving..."
+                cancelLabel="Keep"
+                tone="danger"
+                loading={noShow.isPending}
+                error={dialogError}
+                onConfirm={() => {
+                    if (pending) noShow.mutate(pending);
+                }}
+                onCancel={() => setPending(null)}
+            />
         </div>
     );
 }

@@ -131,7 +131,7 @@ Tags: module (`core`, `personnel`, `access`, `events`, `notifications`, `monitor
 
 **S3.7 Admin dashboard** `events` `desktop` **M**
 - Today's events, unacknowledged assignments, people not on duty 30 minutes after shift start.
-- Later (needs S4.1): the "not on duty" list shows people whose duty never started. Until start duty exists, it lists everyone not yet started, so it is not accurate.
+- Done: the "not on duty" list shows only people whose duty never started, now that S4.1 exists. An "On duty now" count and panel, on duty staffing per event, minutes late, and Mark no show from the dashboard.
 
 **S3.9 Calendar view** `events` `desktop` **S**
 - Admin sees events by month, week or day from `GET /api/events/calendar`, through a List and Calendar switch on the Events page (no separate sidebar link). Click an event to open it.
