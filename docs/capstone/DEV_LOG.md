@@ -184,3 +184,11 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Decision and why: `GET /api/dashboard` adds `on_duty`, `on_duty_count`, `places_needed`, and the duty name and status on each person row. No location data is sent, so the dashboard needs no `location.view` grant
 - Evidence: tests/Feature/Events/AssignmentRulesTest.php
 - Paper: Chapter 3 (user interface design)
+
+## 2026-11-08 · S3.7 Admin dashboard, cleaner and phone ready (events)
+- What was built: the four counts became separate cards with a small line icon, two per row on phones and four on desktop. A refresh button sits next to "Updated" time. Today's events has an "All events" link
+- What was built: a Statistics section with four placeholder cards: Attendance, Duty hours, Time to acknowledge and Events by type. They show the layout in gray with "--" values and a "Coming soon" chip, so no one reads made-up numbers as real
+- Decision and why: on phones the Late to start and Not acknowledged lists come first, because those need action. On desktop they sit in the right column. The page order puts them first, so screen readers also reach them first
+- Decision and why: the lists use container queries. In a narrow list the time and actions drop under the name, so names are no longer cut to one letter in the right column. Mark no show is a 40 px outlined button on phones
+- Problem met and fix: the page scrolled sideways on phones because the grid had no column size. `grid-cols-1` and `min-w-0` fixed it
+- Paper: Chapter 3 (user interface design)
