@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Events;
 
 use App\Modules\Events\Console\CompleteEndedEvents;
-use App\Modules\Events\Contracts\AssignmentLookup;
 use App\Modules\Events\Console\MarkNoShows;
+use App\Modules\Events\Contracts\AssignmentLookup;
 use App\Modules\Events\Models\Event;
 use App\Modules\Events\Policies\EventPolicy;
 use App\Modules\Events\Services\EloquentAssignmentLookup;
