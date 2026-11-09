@@ -38,7 +38,10 @@ class UpdateAssignmentRequest extends FormRequest
             /** @var Assignment $assignment */
             $assignment = $this->route('assignment');
             $target = DutyRequirement::query()->findOrFail($this->integer('requirement_id'));
-            if ($target->event_id !== $assignment->event_id || $target->role !== $assignment->user->role?->code) {
+            $user = $assignment->user;
+            if (! $user->canSignIn()) {
+                $v->errors()->add('requirement_id', 'This person is not active, so they cannot be moved to a duty.');
+            } elseif ($target->event_id !== $assignment->event_id || $target->role !== $user->role?->code) {
                 $v->errors()->add('requirement_id', 'Pick a duty of the same event that needs this role.');
             } elseif (($clash = $target->overlapFor($assignment->user_id, $assignment->id)) !== null) {
                 $v->errors()->add('requirement_id', "This person already has a duty at that time ({$clash->event->title}).");

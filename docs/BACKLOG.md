@@ -40,7 +40,7 @@ Checked against the code. Done, Partial or Not started. Update this table when a
 | S2.6 | Permission check with grants | Not started |
 | S2.7 | Grants manager | Not started |
 | S2.8 | Coordinator event notices | Done |
-| S3.1 | Assignment conflict checks | Partial |
+| S3.1 | Assignment conflict checks | Done |
 | S3.2 | Acknowledge | Done |
 | S3.3 | Edit and cancel assignments | Done |
 | S3.4 | Email on assignment created, changed, cancelled | Done |
@@ -69,7 +69,7 @@ Checked against the code. Done, Partial or Not started. Update this table when a
 | S6.5 | Production deployment | Not started |
 | S6.6 | Field test | Not started |
 
-Partial notes: S2.3 and S2.4 have models only. S2.5 has contracts but no consent screen or `consent_required` 403. S3.1 has the overlap chip and headcount override, but the inactive volunteer block on save is unconfirmed.
+Partial notes: S2.3 and S2.4 have models only. S2.5 has contracts but no consent screen or `consent_required` 403.
 
 ---
 
