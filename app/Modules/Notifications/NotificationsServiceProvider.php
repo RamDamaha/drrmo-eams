@@ -8,7 +8,11 @@ use App\Modules\Notifications\Contracts\AssignmentNotifier;
 use App\Modules\Notifications\Contracts\MailSender;
 use App\Modules\Notifications\Services\LogMailSender;
 use App\Modules\Notifications\Services\PhpMailerSender;
+use App\Modules\Notifications\Models\Notification;
+use App\Modules\Notifications\Policies\NotificationPolicy;
 use App\Modules\Notifications\Services\QueuedAssignmentNotifier;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
 class NotificationsServiceProvider extends ServiceProvider
@@ -27,5 +31,7 @@ class NotificationsServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadViewsFrom(__DIR__.'/Views', 'eams-notifications');
+        Gate::policy(Notification::class, NotificationPolicy::class);
+        Route::middleware(['api', 'auth:api'])->prefix('api')->group(__DIR__.'/routes.php');
     }
 }

@@ -45,7 +45,7 @@ Checked against the code. Done, Partial or Not started. Update this table when a
 | S3.3 | Edit and cancel assignments | Done |
 | S3.4 | Email on assignment created, changed, cancelled | Done |
 | S3.5 | Shift reminders | Not started |
-| S3.6 | Notification log | Not started |
+| S3.6 | Notification log | Done |
 | S3.7 | Admin dashboard | Done |
 | S3.8 | No-show marking | Done |
 | S3.9 | Calendar view | Done |

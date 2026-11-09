@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router';
 import { adminEventRoutes, dashboardRoute, myDutiesRoute } from '@/features/events/routes';
+import { adminNotificationRoutes } from '@/features/notifications/routes';
 import { AdminLayout } from '@/layouts/AdminLayout';
 import { MobileLayout } from '@/layouts/MobileLayout';
 import { CookieNotice } from '@/pages/CookieNotice';
@@ -34,6 +35,7 @@ export const router = createBrowserRouter([
                     dashboardRoute,
                     { path: 'requests', element: <AccessRequests /> },
                     ...adminEventRoutes,
+                    ...adminNotificationRoutes,
                 ],
             },
         ],
