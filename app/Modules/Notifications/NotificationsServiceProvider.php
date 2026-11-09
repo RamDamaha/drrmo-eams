@@ -24,7 +24,8 @@ class NotificationsServiceProvider extends ServiceProvider
         $this->app->bind(AssignmentNotifier::class, QueuedAssignmentNotifier::class);
         $this->app->bind(MailSender::class, function (): MailSender {
             $host = (string) config('mail.phpmailer.host');
-            $logOnly = config('mail.default') === 'log' || $host === '';
+            // Tests and the log or array mailers never reach a real mail server, even when MAIL_HOST is set.
+            $logOnly = in_array(config('mail.default'), ['log', 'array'], true) || $this->app->environment('testing') || $host === '';
 
             return $logOnly ? new LogMailSender : new PhpMailerSender;
         });

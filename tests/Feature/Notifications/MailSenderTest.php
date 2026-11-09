@@ -19,10 +19,26 @@ it('writes the message to the log when no SMTP host is set', function () {
     expect(app(MailSender::class))->toBeInstanceOf(LogMailSender::class);
 });
 
-it('uses PHPMailer when an SMTP host is set', function () {
+it('uses PHPMailer when an SMTP host is set and the app is not testing', function () {
+    config(['mail.default' => 'smtp', 'mail.phpmailer.host' => 'smtp.example.test']);
+    app()->detectEnvironment(fn () => 'local');
+
+    // Only builds the sender. Nothing is sent.
+    expect(app(MailSender::class))->toBeInstanceOf(PhpMailerSender::class);
+});
+
+it('never uses the real sender in the testing environment, even when an SMTP host is set', function () {
     config(['mail.default' => 'smtp', 'mail.phpmailer.host' => 'smtp.example.test']);
 
-    expect(app(MailSender::class))->toBeInstanceOf(PhpMailerSender::class);
+    expect(app()->environment('testing'))->toBeTrue()
+        ->and(app(MailSender::class))->toBeInstanceOf(LogMailSender::class);
+});
+
+it('writes the message to the log when MAIL_MAILER is array', function () {
+    config(['mail.default' => 'array', 'mail.phpmailer.host' => 'smtp.example.test']);
+    app()->detectEnvironment(fn () => 'local');
+
+    expect(app(MailSender::class))->toBeInstanceOf(LogMailSender::class);
 });
 
 it('logs the full message including the code', function () {
