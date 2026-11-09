@@ -25,7 +25,7 @@
         .px { padding-left: 24px !important; padding-right: 24px !important; }
         .outer { padding: 0 !important; }
         .card { border-radius: 0 !important; border-left: 0 !important; border-right: 0 !important; }
-        .header { border-radius: 0 !important; }
+        .header { border-radius: 0 !important; padding-top: 20px !important; padding-bottom: 20px !important; }
         .h1 { font-size: 22px !important; line-height: 30px !important; }
         .code { font-size: 30px !important; letter-spacing: 6px !important; }
         .dl { width: 96px !important; }
@@ -68,11 +68,15 @@
         <td class="header px" bgcolor="#520f14" style="background-color:#520f14;background-image:linear-gradient(135deg,#661419 0%,#520f14 55%,#33080b 100%);border-radius:12px 12px 0 0;padding:24px 40px;">
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
                 <tr>
-                    <td width="104" valign="middle" style="width:104px;">
-                        <img src="cid:zppsu-logo" width="48" height="48" alt="Zamboanga Peninsula Polytechnic State University logo" style="display:inline-block;vertical-align:middle;width:48px;height:48px;">
-                        <img src="cid:drrmo-logo" width="43" height="48" alt="ZPPSU Disaster Risk Reduction and Management Office logo" style="display:inline-block;vertical-align:middle;width:43px;height:48px;margin-left:8px;">
+                    <td valign="middle" width="1" style="width:1px;white-space:nowrap;padding-right:14px;">
+                        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                                <td width="48" valign="middle" style="width:48px;"><img src="cid:zppsu-logo" width="48" height="48" alt="Zamboanga Peninsula Polytechnic State University logo" style="display:block;width:48px;height:48px;"></td>
+                                <td width="43" valign="middle" style="width:43px;padding-left:8px;"><img src="cid:drrmo-logo" width="43" height="48" alt="ZPPSU Disaster Risk Reduction and Management Office logo" style="display:block;width:43px;height:48px;"></td>
+                            </tr>
+                        </table>
                     </td>
-                    <td valign="middle" style="padding-left:16px;border-left:1px solid #7d1d23;">
+                    <td valign="middle" style="padding-left:14px;border-left:1px solid #7d1d23;">
                         <div style="font-family:{!! $font !!};font-size:11px;line-height:16px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#f7cb4f;">DRRMO EAMS</div>
                         <div class="gm-screen"><div class="gm-diff" style="font-family:{!! $font !!};font-size:14px;line-height:20px;font-weight:600;color:#ffffff;">ZPPSU Disaster Risk Reduction and Management Office</div></div>
                     </td>
