@@ -93,3 +93,35 @@ it('queues nothing when a non-admin tries to change an assignment', function () 
     expect(Notification::query()->count())->toBe(0);
     Queue::assertNothingPushed();
 });
+
+it('notifies every active assignee once when an event is cancelled', function () {
+    Queue::fake();
+    $admin = User::factory()->role(RoleCode::Admin)->create();
+    $one = User::factory()->role(RoleCode::Marshal)->create();
+    $two = User::factory()->role(RoleCode::Marshal)->create();
+    $gone = User::factory()->role(RoleCode::Marshal)->create();
+    $event = Event::factory()->create(['status' => 'published']);
+    $req = emailReq($event);
+    foreach ([$one, $two] as $u) {
+        $req->assignments()->create(['event_id' => $event->id, 'user_id' => $u->id, 'duty_type_id' => $req->duty_type_id]);
+    }
+    $req->assignments()->create(['event_id' => $event->id, 'user_id' => $gone->id, 'duty_type_id' => $req->duty_type_id, 'status' => 'cancelled']);
+
+    withAuthCookies(loginCookies($admin))->postJson("/api/events/{$event->id}/cancel")->assertOk();
+
+    expect(Notification::query()->pluck('user_id')->sort()->values()->all())->toBe(collect([$one->id, $two->id])->sort()->values()->all())
+        ->and(Notification::query()->where('type', 'assignment.cancelled')->count())->toBe(2);
+    Queue::assertPushed(SendNotificationEmail::class, 2);
+});
+
+it('does not notify anyone when a non-admin tries to cancel an event', function () {
+    Queue::fake();
+    $marshal = User::factory()->role(RoleCode::Marshal)->create();
+    $event = Event::factory()->create(['status' => 'published']);
+    $req = emailReq($event);
+    $req->assignments()->create(['event_id' => $event->id, 'user_id' => $marshal->id, 'duty_type_id' => $req->duty_type_id]);
+
+    withAuthCookies(loginCookies($marshal))->postJson("/api/events/{$event->id}/cancel")->assertForbidden();
+
+    expect(Notification::query()->count())->toBe(0);
+});
