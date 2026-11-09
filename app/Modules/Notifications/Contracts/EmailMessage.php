@@ -94,7 +94,7 @@ final class EmailMessage
 
     public function html(): string
     {
-        return view('notifications::email', [
+        return view('eams-notifications::email', [
             'subject' => $this->subject,
             'heading' => $this->heading,
             'preheader' => $this->preheader,

@@ -26,6 +26,6 @@ class NotificationsServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->loadViewsFrom(__DIR__.'/Views', 'notifications');
+        $this->loadViewsFrom(__DIR__.'/Views', 'eams-notifications');
     }
 }

@@ -52,8 +52,8 @@ class SendNotificationEmail implements ShouldQueue
     private function compose(Notification $n): EmailMessage
     {
         $a = $n->assignment;
-        $event = $a?->event?->title ?? 'an event';
-        $link = url('/').'?assignment='.($a?->id ?? '');
+        $event = $a?->event->title ?? 'an event';
+        $link = url('/').'?assignment='.($a->id ?? '');
 
         [$subject, $heading, $intro, $preheader] = match ($n->type) {
             NotificationType::AssignmentCreated->value => ['New duty assignment', 'You have a new duty', 'You have been assigned to a duty. Please check the details below.', 'You have been assigned to a duty at '.$event.'.'],
@@ -63,12 +63,12 @@ class SendNotificationEmail implements ShouldQueue
 
         $message = EmailMessage::make($subject.': '.$event, $heading)
             ->preheader($preheader)
-            ->greeting($n->user?->first_name ?? 'there')
+            ->greeting($n->user->first_name ?? 'there')
             ->line($intro)
             ->details([
                 'Event' => $event,
-                'Duty' => $a?->dutyType?->name ?? 'a duty',
-                'Where' => $a?->event?->location?->name ?? 'See the app',
+                'Duty' => $a?->dutyType->name ?? 'a duty',
+                'Where' => $a?->event->location->name ?? 'See the app',
                 'Shift' => $this->shift($a?->requirement?->shift_starts_at, $a?->requirement?->shift_ends_at),
             ]);
 
