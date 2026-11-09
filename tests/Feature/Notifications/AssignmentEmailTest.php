@@ -10,6 +10,7 @@ use App\Modules\Notifications\Contracts\MailSender;
 use App\Modules\Notifications\Jobs\SendNotificationEmail;
 use App\Modules\Notifications\Models\Notification;
 use App\Modules\Personnel\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Queue;
 
 beforeEach(function () {
@@ -124,4 +125,58 @@ it('does not notify anyone when a non-admin tries to cancel an event', function 
     withAuthCookies(loginCookies($marshal))->postJson("/api/events/{$event->id}/cancel")->assertForbidden();
 
     expect(Notification::query()->count())->toBe(0);
+});
+
+function reminderAssignment(string $startsAt, array $over = []): Assignment
+{
+    $event = Event::factory()->create(['status' => 'published']);
+    $req = $event->requirements()->create([
+        'duty_type_id' => DutyType::query()->firstOrFail()->id, 'role' => 'marshal', 'headcount' => 1,
+        'shift_starts_at' => $startsAt, 'shift_ends_at' => Carbon::parse($startsAt)->addHours(4),
+    ]);
+
+    return $req->assignments()->create(['event_id' => $event->id, 'user_id' => User::factory()->role(RoleCode::Marshal)->create()->id, 'duty_type_id' => $req->duty_type_id, ...$over]);
+}
+
+it('sends the evening reminder once after 6 PM Manila time and the hour reminder once in the last hour', function () {
+    Queue::fake();
+    // Shift 9:00 AM Manila tomorrow = 01:00 UTC. The evening reminder is due at 10:00 UTC today.
+    $this->travelTo(Carbon::parse('2026-11-10 09:00:00', 'UTC'));
+    $a = reminderAssignment('2026-11-11 01:00:00');
+
+    $this->artisan('notifications:send-reminders')->assertSuccessful();
+    expect(Notification::query()->count())->toBe(0);
+
+    $this->travelTo(Carbon::parse('2026-11-10 10:05:00', 'UTC'));
+    $this->artisan('notifications:send-reminders');
+    $this->artisan('notifications:send-reminders');
+    expect(Notification::query()->where('type', 'reminder.evening')->count())->toBe(1);
+
+    $this->travelTo(Carbon::parse('2026-11-11 00:05:00', 'UTC'));
+    $this->artisan('notifications:send-reminders');
+    $this->artisan('notifications:send-reminders');
+    expect(Notification::query()->where('assignment_id', $a->id)->orderBy('id')->pluck('type')->all())->toBe(['reminder.evening', 'reminder.hour']);
+});
+
+it('sends no reminder for cancelled, past or cancelled-event assignments', function () {
+    Queue::fake();
+    $this->travelTo(Carbon::parse('2026-11-11 00:30:00', 'UTC'));
+    reminderAssignment('2026-11-11 01:00:00', ['status' => 'cancelled']);
+    reminderAssignment('2026-11-10 20:00:00');
+    $gone = reminderAssignment('2026-11-11 01:00:00');
+    $gone->event->update(['status' => 'cancelled']);
+
+    $this->artisan('notifications:send-reminders')->assertSuccessful();
+
+    expect(Notification::query()->count())->toBe(0);
+});
+
+it('skips the evening reminder when the 1 hour reminder is already due', function () {
+    Queue::fake();
+    $this->travelTo(Carbon::parse('2026-11-11 00:20:00', 'UTC'));
+    reminderAssignment('2026-11-11 01:00:00');
+
+    $this->artisan('notifications:send-reminders');
+
+    expect(Notification::query()->pluck('type')->all())->toBe(['reminder.hour']);
 });

@@ -100,7 +100,7 @@ class NotificationController
             'status' => $n->status,
             'attempts' => $n->attempts,
             'last_error' => $n->last_error,
-            'created_at' => $n->created_at?->toIso8601String(),
+            'created_at' => $n->created_at->toIso8601String(),
             'sent_at' => $n->sent_at?->toIso8601String(),
             'recipient' => $n->user === null ? null : ['name' => $n->user->name, 'email' => $n->user->email],
             'event' => $n->assignment?->event->title,

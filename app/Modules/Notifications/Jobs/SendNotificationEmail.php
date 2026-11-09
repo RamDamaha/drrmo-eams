@@ -58,6 +58,8 @@ class SendNotificationEmail implements ShouldQueue
         [$subject, $heading, $intro, $preheader] = match ($n->type) {
             NotificationType::AssignmentCreated->value => ['New duty assignment', 'You have a new duty', 'You have been assigned to a duty. Please check the details below.', 'You have been assigned to a duty at '.$event.'.'],
             NotificationType::AssignmentChanged->value => ['Duty assignment changed', 'Your duty was changed', 'Your duty assignment was changed. These are the new details.', 'Your duty at '.$event.' was changed.'],
+            NotificationType::ReminderEvening->value => ['Duty reminder', 'Your duty is tomorrow', 'This is a reminder that you are on duty tomorrow. Please check the details below.', 'You are on duty tomorrow at '.$event.'.'],
+            NotificationType::ReminderHour->value => ['Duty starts in 1 hour', 'Your duty starts soon', 'Your duty starts in about 1 hour. Please check the details below.', 'Your duty at '.$event.' starts in about 1 hour.'],
             default => ['Duty assignment cancelled', 'Your duty was cancelled', 'Your duty assignment was cancelled. You do not need to report for it.', 'Your duty at '.$event.' was cancelled.'],
         };
 

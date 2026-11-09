@@ -209,3 +209,10 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Problem met and fix: shift times were printed in UTC. They are now shown in Asia/Manila, as PROJECT_PLAN A8 says
 - Evidence: tests/Feature/Notifications/EmailMessageTest.php, AssignmentEmailTest.php, RegistrationTest.php
 - Paper: Chapter 3 (system design, interface design)
+
+## 2026-11-09 · S3.5 Shift reminders (notifications)
+- What was built: the `notifications:send-reminders` command, scheduled every five minutes. It queues an email at 6:00 PM Manila time the evening before a shift and another 1 hour before it starts
+- Decision and why: each assignment gets each reminder once, because the command looks for an existing notification row of that type first. Cancelled, no show and ended assignments, cancelled events and disabled people never get one
+- Decision and why: if the 1 hour reminder is already due, the evening one is skipped, so a person assigned late is not sent two emails at once
+- Evidence: tests/Feature/Notifications/AssignmentEmailTest.php
+- Paper: Chapter 3 (system design)
