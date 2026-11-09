@@ -1,12 +1,16 @@
 // M-Notifications. The emails the system sent to this person, newest first. Read only.
-import { useQuery } from '@tanstack/react-query';
-import { listMyNotifications } from '../../api';
+import { useEffect } from 'react';
+import { useAlerts } from '../../unread';
 import { typeSentences, when } from '../../format';
 import { Alert } from '@/shared/ui/Alert';
 import { Button } from '@/shared/ui/Button';
 
 export function MyNotifications() {
-    const list = useQuery({ queryKey: ['my-notifications'], queryFn: listMyNotifications });
+    const { list, markSeen } = useAlerts();
+    // Opening the page counts as reading. Wait for the data so nothing new is hidden.
+    useEffect(() => {
+        if (list.isSuccess) markSeen();
+    }, [list.isSuccess, list.dataUpdatedAt, markSeen]);
 
     return (
         <div className="mx-auto max-w-2xl">

@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink, Outlet } from 'react-router';
+import { useAlerts } from '@/features/notifications/unread';
 import { SignOutButton } from '@/app/SignOutButton';
 import { BrandLogos } from '@/shared/ui/BrandLogos';
 
@@ -95,6 +96,14 @@ function useOnline() {
 // and the content gets a wider column, so marshals and volunteers can use a desktop too.
 export function MobileLayout() {
     const online = useOnline();
+    const { unread } = useAlerts();
+    const dot = (to: string) =>
+        unread && to === '/me/notifications' ? (
+            <span
+                className="absolute top-0.5 right-0.5 size-2.5 rounded-full bg-red-600 ring-2 ring-white"
+                aria-hidden="true"
+            />
+        ) : null;
 
     return (
         <div className="min-h-dvh bg-stone-50">
@@ -117,8 +126,14 @@ export function MobileLayout() {
                                             `flex h-full items-center gap-2 border-b-2 px-3 text-sm transition-colors [&_svg]:size-5 ${isActive ? 'border-maroon-700 font-semibold text-maroon-700' : 'border-transparent font-medium text-stone-600 hover:border-stone-300 hover:text-stone-900'}`
                                         }
                                     >
-                                        {tab.icon}
+                                        <span className="relative">
+                                            {tab.icon}
+                                            {dot(tab.to)}
+                                        </span>
                                         {tab.label}
+                                        {unread && tab.to === '/me/notifications' && (
+                                            <span className="sr-only"> (new)</span>
+                                        )}
                                     </NavLink>
                                 </li>
                             ))}
@@ -161,11 +176,15 @@ export function MobileLayout() {
                             {({ isActive }) => (
                                 <>
                                     <span
-                                        className={`flex h-8 w-14 items-center justify-center rounded-full transition-colors ${isActive ? 'bg-maroon-100' : 'group-hover:bg-stone-100'}`}
+                                        className={`relative flex h-8 w-14 items-center justify-center rounded-full transition-colors ${isActive ? 'bg-maroon-100' : 'group-hover:bg-stone-100'}`}
                                     >
                                         {tab.icon}
+                                        {dot(tab.to)}
                                     </span>
                                     {tab.label}
+                                    {unread && tab.to === '/me/notifications' && (
+                                        <span className="sr-only"> (new)</span>
+                                    )}
                                 </>
                             )}
                         </NavLink>
