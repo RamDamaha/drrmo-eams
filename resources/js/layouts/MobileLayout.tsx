@@ -97,10 +97,11 @@ function useOnline() {
 export function MobileLayout() {
     const online = useOnline();
     const { unread } = useAlerts();
-    const dot = (to: string) =>
+    // The dot sits on the bell's top right corner. A white ring cuts it out of the icon.
+    const dot = (to: string, place: string) =>
         unread && to === '/me/notifications' ? (
             <span
-                className="absolute top-0.5 right-0.5 size-2.5 rounded-full bg-red-600 ring-2 ring-white"
+                className={`absolute size-2.5 rounded-full bg-red-600 ring-2 ring-white ${place}`}
                 aria-hidden="true"
             />
         ) : null;
@@ -128,7 +129,7 @@ export function MobileLayout() {
                                     >
                                         <span className="relative">
                                             {tab.icon}
-                                            {dot(tab.to)}
+                                            {dot(tab.to, '-top-0.5 -right-0.5')}
                                         </span>
                                         {tab.label}
                                         {unread && tab.to === '/me/notifications' && (
@@ -179,7 +180,7 @@ export function MobileLayout() {
                                         className={`relative flex h-8 w-14 items-center justify-center rounded-full transition-colors ${isActive ? 'bg-maroon-100' : 'group-hover:bg-stone-100'}`}
                                     >
                                         {tab.icon}
-                                        {dot(tab.to)}
+                                        {dot(tab.to, 'top-0.5 left-1/2 ml-1')}
                                     </span>
                                     {tab.label}
                                     {unread && tab.to === '/me/notifications' && (

@@ -58,5 +58,5 @@ export function useAlerts() {
         window.dispatchEvent(new Event(event));
     }, [userId]);
 
-    return { list, markSeen, unread: list.data ? hasUnread(list.data, seenAt) : false };
+    return { list, markSeen, seenAt, unread: list.data ? hasUnread(list.data, seenAt) : false };
 }
