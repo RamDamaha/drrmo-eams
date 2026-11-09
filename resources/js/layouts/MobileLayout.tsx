@@ -52,6 +52,16 @@ const tabs = [
         ),
     },
     {
+        to: '/me/notifications',
+        label: 'Alerts',
+        icon: (
+            <TabIcon>
+                <path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z" />
+                <path d="M10 20a2 2 0 0 0 4 0" />
+            </TabIcon>
+        ),
+    },
+    {
         to: '/me/profile',
         label: 'Me',
         icon: (
@@ -138,7 +148,7 @@ export function MobileLayout() {
                 aria-label="Main"
                 className="fixed inset-x-0 bottom-0 z-20 border-t border-stone-200 bg-white pb-[env(safe-area-inset-bottom)] md:hidden"
             >
-                <div className="mx-auto grid max-w-2xl grid-cols-4 px-2">
+                <div className="mx-auto grid max-w-2xl grid-cols-5 px-2">
                     {tabs.map((tab) => (
                         <NavLink
                             key={tab.to}

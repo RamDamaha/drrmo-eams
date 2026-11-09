@@ -43,3 +43,16 @@ export async function listNotifications(f: NotificationFilters): Promise<Notific
 export async function retryNotification(id: number): Promise<void> {
     await api(`/api/notifications/${id}/retry`, { method: 'POST' });
 }
+
+export interface MyNotification {
+    id: number;
+    type: string;
+    sent_at: string | null;
+    event: string | null;
+    assignment_id: number | null;
+}
+
+export async function listMyNotifications(): Promise<MyNotification[]> {
+    const body = await api<{ data: MyNotification[] }>('/api/me/notifications');
+    return body.data;
+}

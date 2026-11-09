@@ -62,3 +62,16 @@ it('keeps the log away from non admins', function () {
     withAuthCookies($cookies)->getJson('/api/notifications')->assertForbidden();
     withAuthCookies($cookies)->postJson("/api/notifications/{$failed->id}/retry")->assertForbidden();
 });
+
+it('shows a person only their own sent notifications', function () {
+    $mara = User::factory()->role(RoleCode::Marshal)->create();
+    $other = User::factory()->role(RoleCode::Marshal)->create();
+    logRow($mara, 'sent', ['sent_at' => now()]);
+    logRow($mara, 'failed');
+    logRow($other, 'sent', ['sent_at' => now()]);
+
+    withAuthCookies(loginCookies($mara))->getJson('/api/me/notifications')
+        ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.type', 'assignment.created');
+
+    $this->withAuthCookies([])->getJson('/api/me/notifications')->assertUnauthorized();
+});

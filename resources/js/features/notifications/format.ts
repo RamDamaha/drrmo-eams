@@ -30,3 +30,9 @@ export function usageLevel(sent: number, limit: number): 'ok' | 'near' | 'over' 
     if (sent >= limit) return 'over';
     return sent / limit >= 0.8 ? 'near' : 'ok';
 }
+
+export const typeSentences: Record<string, string> = {
+    'assignment.created': 'You were assigned to a duty',
+    'assignment.changed': 'Your duty was changed',
+    'assignment.cancelled': 'Your duty was cancelled',
+};

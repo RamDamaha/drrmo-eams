@@ -63,6 +63,22 @@ class NotificationController
         ]);
     }
 
+    /** The signed-in person's own sent emails, newest first. Failed and queued ones stay admin only. */
+    public function mine(Request $request): JsonResponse
+    {
+        $rows = Notification::query()->with('assignment.event:id,title')
+            ->where('user_id', $request->user()?->id)->where('status', 'sent')
+            ->orderByDesc('sent_at')->limit(50)->get();
+
+        return response()->json(['data' => $rows->map(fn (Notification $n) => [
+            'id' => $n->id,
+            'type' => $n->type,
+            'sent_at' => $n->sent_at?->toIso8601String(),
+            'event' => $n->assignment?->event->title,
+            'assignment_id' => $n->assignment_id,
+        ])->values()]);
+    }
+
     public function retry(Notification $notification, AuditLogger $audit): JsonResponse
     {
         Gate::authorize('retry', Notification::class);
