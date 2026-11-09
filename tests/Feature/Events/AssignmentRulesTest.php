@@ -321,9 +321,13 @@ it('blocks moving an inactive person, an overlapping shift, and a full duty with
     $otherReq = $other->requirements()->create(shift($other));
     $second = $other->requirements()->create(shift($other, ['headcount' => 3]));
     $mine = assignTo($otherReq, $a);
+    // $a still holds a duty in the first event, which overlaps this one, so the move is blocked.
+    withAuthCookies($cookies)->patchJson("/api/assignments/{$mine->id}", ['requirement_id' => $second->id])
+        ->assertUnprocessable()->assertJsonValidationErrors(['requirement_id']);
+    $assignment->update(['status' => 'cancelled']);
     withAuthCookies($cookies)->patchJson("/api/assignments/{$mine->id}", ['requirement_id' => $second->id])->assertOk();
 
-    $a->update(['account_status' => 'pending_approval']);
+    $a->forceFill(['account_status' => 'pending_approval'])->save();
     withAuthCookies($cookies)->patchJson("/api/assignments/{$mine->id}", ['requirement_id' => $otherReq->id])
         ->assertUnprocessable()->assertJsonValidationErrors(['requirement_id']);
 });
