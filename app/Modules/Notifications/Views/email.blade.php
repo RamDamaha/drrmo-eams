@@ -28,11 +28,16 @@
         .header { border-radius: 0 !important; }
         .h1 { font-size: 22px !important; line-height: 30px !important; }
         .code { font-size: 30px !important; letter-spacing: 6px !important; }
-        .btn { width: 100% !important; }
-        .btn td { text-align: center !important; }
-        .btn a { display: block !important; }
         .dl { width: 96px !important; }
     }
+    /* Gmail on iPhone inverts text colors in dark mode but keeps background images.
+       These two blend layers turn white text back to white there. Only Gmail matches u + .body. */
+    u + .body .gm-screen { background: #000; mix-blend-mode: screen; }
+    u + .body .gm-diff { background: #000; mix-blend-mode: difference; }
+</style>
+{{-- Gmail drops a whole style block when one rule is unsupported, so the dark mode rules
+     sit in their own blocks and cannot take the layout rules above down with them. --}}
+<style>
     @media (prefers-color-scheme: dark) {
         .page { background-color: #1c1917 !important; }
         .card { background-color: #292524 !important; border-color: #44403c !important; }
@@ -43,13 +48,15 @@
         .t-muted { color: #a8a29e !important; }
         .t-link { color: #fbe08e !important; }
     }
+</style>
+<style>
     [data-ogsc] .t-main { color: #fafaf9 !important; }
     [data-ogsc] .t-body { color: #e7e5e4 !important; }
     [data-ogsc] .t-muted { color: #a8a29e !important; }
     [data-ogsc] .t-link { color: #fbe08e !important; }
 </style>
 </head>
-<body class="page" style="margin:0;padding:0;background-color:#f5f5f4;">
+<body class="page body" style="margin:0;padding:0;background-color:#f5f5f4;">
 <div style="display:none;max-height:0;max-width:0;overflow:hidden;opacity:0;mso-hide:all;font-size:1px;line-height:1px;color:#f5f5f4;">{{ $preheader }}{!! str_repeat('&#847;&zwnj;&nbsp;', 60) !!}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="page" style="background-color:#f5f5f4;">
 <tr>
@@ -67,7 +74,7 @@
                     </td>
                     <td valign="middle" style="padding-left:16px;border-left:1px solid #7d1d23;">
                         <div style="font-family:{!! $font !!};font-size:11px;line-height:16px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#f7cb4f;">DRRMO EAMS</div>
-                        <div style="font-family:{!! $font !!};font-size:14px;line-height:20px;font-weight:600;color:#ffffff;">ZPPSU Disaster Risk Reduction and Management Office</div>
+                        <div class="gm-screen"><div class="gm-diff" style="font-family:{!! $font !!};font-size:14px;line-height:20px;font-weight:600;color:#ffffff;">ZPPSU Disaster Risk Reduction and Management Office</div></div>
                     </td>
                 </tr>
             </table>
@@ -103,10 +110,12 @@
                         @break
 
                     @case('button')
-                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" class="btn" style="margin-top:28px;">
+                        {{-- Full width at every size, so it never depends on a media query a mail app may drop.
+                             The background image keeps it maroon when Gmail inverts colors in dark mode. --}}
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:28px;width:100%;">
                             <tr>
-                                <td bgcolor="#7d1d23" style="background-color:#7d1d23;border-radius:8px;">
-                                    <a href="{{ $b['url'] }}" target="_blank" style="display:inline-block;padding:14px 28px;font-family:{!! $font !!};font-size:16px;line-height:20px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;">{{ $b['label'] }}</a>
+                                <td align="center" bgcolor="#7d1d23" style="background-color:#7d1d23;background-image:linear-gradient(#7d1d23,#7d1d23);border-radius:8px;text-align:center;">
+                                    <a href="{{ $b['url'] }}" target="_blank" style="display:block;padding:14px 20px;font-family:{!! $font !!};font-size:16px;line-height:20px;font-weight:600;color:#ffffff;text-align:center;text-decoration:none;border-radius:8px;"><span class="gm-screen" style="display:block;"><span class="gm-diff" style="display:block;color:#ffffff;">{{ $b['label'] }}</span></span></a>
                                 </td>
                             </tr>
                         </table>

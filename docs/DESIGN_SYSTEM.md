@@ -263,9 +263,11 @@ Every email uses one shared layout: `app/Modules/Notifications/Views/email.blade
 - Width 600 px, centered on a `stone-100` page. On phones (under 620 px) it goes full width with 24 px side padding.
 - Header: a `maroon-900` bar with the soft maroon gradient, both logos (ZPPSU first) at 48 px, a gold "DRRMO EAMS" eyebrow and the office name in white.
 - Card: white, `stone-200` border, 12 px bottom corners. The brand stripe sits above the heading. Heading 24 px bold `stone-900`, body 16 px `stone-700`.
-- Blocks: `line` (a paragraph), `code` (a one time code in large type in a `stone-50` box), `button` (maroon, 8 px corners, with the link printed under it for copying), `details` (label and value rows split by hairlines), `notice` (a boxed note with an eyebrow label, such as a reason).
+- Blocks: `line` (a paragraph), `code` (a one time code in large type in a `stone-50` box), `button` (maroon, full width at every size, 8 px corners, with the link printed under it for copying), `details` (label and value rows split by hairlines), `notice` (a boxed note with an eyebrow label, such as a reason).
 - One button per email at most. Sign off as "ZPPSU DRRMO". The footer names the office and says replies are not read.
-- Tables and inline styles only, so it holds up in Gmail, Outlook and phone mail apps. Dark mode mail apps get darker card colors through a media query. The header stays maroon in both.
+- Tables and inline styles only, so it holds up in Gmail, Outlook and phone mail apps.
+- Gmail drops a whole `<style>` block if one rule is unsupported. Keep layout rules, dark mode rules and Outlook (`[data-ogsc]`) rules in separate blocks, and never let the layout depend on a media query.
+- Gmail on iPhone inverts text colors in dark mode. White text on maroon (button, header) sits inside the `gm-screen` and `gm-diff` blend layers, and the maroon also goes in a `background-image`, so both stay right. Dark mode mail apps get darker card colors through a media query. The header stays maroon in both.
 - Every email also has a plain text part with the same words. The `preheader` is the short line inboxes show after the subject.
 - Times are shown in Asia/Manila.
 - Local preview: with `MAIL_MAILER=log`, the last email is saved to `storage/logs/mail-preview.html`.
