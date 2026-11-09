@@ -28,7 +28,9 @@
         .header { border-radius: 0 !important; }
         .h1 { font-size: 22px !important; line-height: 30px !important; }
         .code { font-size: 30px !important; letter-spacing: 6px !important; }
-        .btn, .btn a { display: block !important; width: 100% !important; text-align: center !important; }
+        .btn { width: 100% !important; }
+        .btn td { text-align: center !important; }
+        .btn a { display: block !important; }
         .dl { width: 96px !important; }
     }
     @media (prefers-color-scheme: dark) {
@@ -103,7 +105,7 @@
                     @case('button')
                         <table role="presentation" cellpadding="0" cellspacing="0" border="0" class="btn" style="margin-top:28px;">
                             <tr>
-                                <td class="btn" bgcolor="#7d1d23" style="background-color:#7d1d23;border-radius:8px;">
+                                <td bgcolor="#7d1d23" style="background-color:#7d1d23;border-radius:8px;">
                                     <a href="{{ $b['url'] }}" target="_blank" style="display:inline-block;padding:14px 28px;font-family:{!! $font !!};font-size:16px;line-height:20px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;">{{ $b['label'] }}</a>
                                 </td>
                             </tr>
