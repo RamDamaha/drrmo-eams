@@ -192,3 +192,11 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Decision and why: the lists use container queries. In a narrow list the time and actions drop under the name, so names are no longer cut to one letter in the right column. Mark no show is a 40 px outlined button on phones
 - Problem met and fix: the page scrolled sideways on phones because the grid had no column size. `grid-cols-1` and `min-w-0` fixed it
 - Paper: Chapter 3 (user interface design)
+
+## 2026-11-09 · S3.4 Email on assignment created, changed, cancelled (notifications)
+- What was built: the `notifications` table (migration 500001), the `Notification` model, the `AssignmentNotifier` contract and a queued `SendNotificationEmail` job. `AssignmentController` calls the contract after create, move and cancel. Each call queues one notification row and one email with a link that opens the app on the person's duties
+- Decision and why: the job retries 3 times (30 s, then 2 min apart). When it gives up, the row is marked `failed` with the last error, so the S3.6 log can show it and offer Retry
+- Decision and why: Events reaches Notifications only through the `AssignmentNotifier` contract, as MODULES.md requires. Notifications owns the table and the email text
+- Problem met and fix: the `users` table has no recipient link in the old `notifications` plan, so the table follows DATABASE.md G7 (`user_id`, `attempts`, `last_error`, nullable `assignment_id`)
+- Evidence: tests/Feature/Notifications/AssignmentEmailTest.php
+- Paper: Chapter 3 (system design), Chapter 4 (reliability of email delivery)

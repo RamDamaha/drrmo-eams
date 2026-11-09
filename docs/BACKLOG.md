@@ -43,7 +43,7 @@ Checked against the code. Done, Partial or Not started. Update this table when a
 | S3.1 | Assignment conflict checks | Partial |
 | S3.2 | Acknowledge | Done |
 | S3.3 | Edit and cancel assignments | Done |
-| S3.4 | Email on assignment created, changed, cancelled | Not started |
+| S3.4 | Email on assignment created, changed, cancelled | Done |
 | S3.5 | Shift reminders | Not started |
 | S3.6 | Notification log | Not started |
 | S3.7 | Admin dashboard | Done |
