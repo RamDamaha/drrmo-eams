@@ -18,3 +18,19 @@ export function findLinkedDuty(duties: MyAssignment[], id: number | null): Linke
     if (!duty) return null;
     return { duty, cancelled: duty.event.status === 'cancelled' };
 }
+
+/**
+ * Keeps ?assignment=<id> when a person is sent from one page to another (sign in, home redirect).
+ * Only the duties page (/me) uses it, so every other path comes back unchanged.
+ */
+export function keepLinkedAssignment(path: string, search: string): string {
+    if (path !== '/me') return path;
+    const id = linkedAssignmentId(new URLSearchParams(search).get('assignment'));
+    return id === null ? path : `${path}?assignment=${id}`;
+}
+
+/** Path to the login page that remembers the linked assignment. */
+export function loginPathFor(search: string): string {
+    const id = linkedAssignmentId(new URLSearchParams(search).get('assignment'));
+    return id === null ? '/login' : `/login?assignment=${id}`;
+}

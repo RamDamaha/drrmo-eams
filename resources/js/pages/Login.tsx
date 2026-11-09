@@ -1,8 +1,9 @@
 // Landing and login screen (M-Login in SCREENS.md). The brand frame lives in AuthLayout.
 import { useState, type FormEvent } from 'react';
-import { Navigate, useNavigate } from 'react-router';
+import { Navigate, useLocation, useNavigate } from 'react-router';
 import { AuthLayout, AuthLink } from '@/app/AuthLayout';
 import { useAuthActions, useMe } from '@/app/auth';
+import { keepLinkedAssignment } from '@/features/events/dutyLink';
 import { ApiError } from '@/shared/api/client';
 import { Alert } from '@/shared/ui/Alert';
 import { Button } from '@/shared/ui/Button';
@@ -43,12 +44,13 @@ export function Login() {
     const { data: me } = useMe();
     const { login } = useAuthActions();
     const navigate = useNavigate();
+    const { search } = useLocation();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [problem, setProblem] = useState<LoginProblem | null>(null);
     const [busy, setBusy] = useState(false);
 
-    if (me) return <Navigate to={me.home} replace />;
+    if (me) return <Navigate to={keepLinkedAssignment(me.home, search)} replace />;
 
     async function submit(event: FormEvent) {
         event.preventDefault();
@@ -56,7 +58,7 @@ export function Login() {
         setProblem(null);
         try {
             const user = await login(email, password);
-            await navigate(user.home, { replace: true });
+            await navigate(keepLinkedAssignment(user.home, search), { replace: true });
         } catch (caught) {
             setProblem(problemFor(caught));
         } finally {

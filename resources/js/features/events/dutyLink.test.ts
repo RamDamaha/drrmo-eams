@@ -27,3 +27,23 @@ describe('findLinkedDuty', () => {
         expect(findLinkedDuty([duty(1)], null)).toBeNull();
     });
 });
+
+import { keepLinkedAssignment, loginPathFor } from './dutyLink';
+
+describe('keepLinkedAssignment', () => {
+    it('keeps the id on the duties page', () => {
+        expect(keepLinkedAssignment('/me', '?assignment=12')).toBe('/me?assignment=12');
+    });
+    it('drops a bad id and leaves other pages alone', () => {
+        expect(keepLinkedAssignment('/me', '?assignment=abc')).toBe('/me');
+        expect(keepLinkedAssignment('/admin', '?assignment=12')).toBe('/admin');
+    });
+});
+
+describe('loginPathFor', () => {
+    it('remembers a good id and ignores anything else', () => {
+        expect(loginPathFor('?assignment=12')).toBe('/login?assignment=12');
+        expect(loginPathFor('?assignment=x')).toBe('/login');
+        expect(loginPathFor('')).toBe('/login');
+    });
+});
