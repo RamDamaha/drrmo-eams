@@ -2,7 +2,8 @@
 // Mobile first at 360 px: one column, date block on the left, whole card readable at a glance.
 // A List and Calendar switch shows the same duties on a month calendar.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { acknowledgeAssignment, listMyAssignments, type MyAssignment } from '@/features/events/api';
 import { DateBlock } from '@/features/events/components/DateBlock';
 import {
@@ -11,6 +12,7 @@ import {
     useShowCalendar,
 } from '@/features/events/components/PersonalCalendar';
 import { CheckIcon, ClipboardIcon, ClockIcon, PinIcon } from '@/features/events/components/icons';
+import { findLinkedDuty, linkedAssignmentId } from '@/features/events/dutyLink';
 import { assignmentStatuses, chipClass } from '@/features/events/format';
 import { DutyControl } from '@/features/monitoring/components/DutyControl';
 import { Alert } from '@/shared/ui/Alert';
@@ -32,7 +34,15 @@ function shiftTime(start: Date, end: Date) {
         : `${clock.format(start)} to ${shortDay.format(end)}, ${clock.format(end)}`;
 }
 
-function DutyCard({ duty, ended = false }: { duty: MyAssignment; ended?: boolean }) {
+function DutyCard({
+    duty,
+    ended = false,
+    linked = false,
+}: {
+    duty: MyAssignment;
+    ended?: boolean;
+    linked?: boolean;
+}) {
     const start = new Date(duty.starts_at);
     const end = new Date(duty.ends_at);
     const cancelled = duty.event.status === 'cancelled' || duty.status === 'cancelled';
@@ -44,10 +54,11 @@ function DutyCard({ duty, ended = false }: { duty: MyAssignment; ended?: boolean
     const headingId = `duty-${duty.id}`;
 
     return (
-        <li>
+        <li id={`duty-card-${duty.id}`} className="scroll-mt-20">
             <article
                 aria-labelledby={headingId}
-                className="h-full rounded-card bg-white ring-1 ring-stone-200"
+                aria-current={linked ? 'true' : undefined}
+                className={`h-full rounded-card bg-white ${linked ? 'ring-2 ring-maroon-600' : 'ring-1 ring-stone-200'}`}
             >
                 <div className="flex gap-4 p-4">
                     <DateBlock date={start} muted={cancelled || ended} />
@@ -158,10 +169,12 @@ function DutyList({
     title,
     duties,
     ended = false,
+    linkedId = null,
 }: {
     title: string;
     duties: MyAssignment[];
     ended?: boolean;
+    linkedId?: number | null;
 }) {
     const id = `duties-${title.toLowerCase()}`;
     return (
@@ -174,7 +187,12 @@ function DutyList({
             </h2>
             <ul className="mt-3 grid gap-3 lg:grid-cols-2">
                 {duties.map((duty) => (
-                    <DutyCard key={duty.id} duty={duty} ended={ended} />
+                    <DutyCard
+                        key={duty.id}
+                        duty={duty}
+                        ended={ended}
+                        linked={duty.id === linkedId}
+                    />
                 ))}
             </ul>
         </section>
@@ -218,7 +236,10 @@ function dutyDot(duty: MyAssignment, now: number) {
 
 export function MyAssignments() {
     const duties = useQuery({ queryKey: ['my-assignments'], queryFn: listMyAssignments });
-    const showCalendar = useShowCalendar();
+    const [params] = useSearchParams();
+    const linkedId = linkedAssignmentId(params.get('assignment'));
+    // A link from an email always shows the list, because the card is found there.
+    const showCalendar = useShowCalendar() && linkedId === null;
 
     const [now] = useState(() => Date.now());
     const all = duties.data ?? [];
@@ -226,7 +247,15 @@ export function MyAssignments() {
     const cancelled = all.filter((duty) => duty.event.status === 'cancelled');
     const upcoming = live.filter((duty) => new Date(duty.ends_at).getTime() >= now);
     const past = live.filter((duty) => new Date(duty.ends_at).getTime() < now).reverse();
+    const linked = findLinkedDuty(all, linkedId);
     const toAcknowledge = upcoming.filter((duty) => duty.status === 'assigned').length;
+
+    // Scroll once per linked duty, not on every refetch.
+    const linkedDutyId = linked?.duty.id ?? null;
+    useEffect(() => {
+        if (linkedDutyId === null) return;
+        document.getElementById(`duty-card-${linkedDutyId}`)?.scrollIntoView({ block: 'center' });
+    }, [linkedDutyId]);
 
     return (
         <div>
@@ -266,6 +295,15 @@ export function MyAssignments() {
                 </div>
             )}
 
+            {duties.isSuccess && linkedId !== null && !linked && (
+                <p
+                    className="mt-4 rounded-control bg-stone-100 px-3 py-2.5 text-sm text-stone-700"
+                    role="status"
+                >
+                    That duty is not in your list. It may have been removed.
+                </p>
+            )}
+
             {duties.isSuccess && all.length === 0 && (
                 <div className="mt-6 flex max-w-2xl flex-col items-center rounded-card bg-white px-6 py-10 text-center ring-1 ring-stone-200 md:py-14">
                     <span className="flex size-11 items-center justify-center rounded-control border border-stone-200 text-maroon-700">
@@ -303,15 +341,20 @@ export function MyAssignments() {
             {duties.isSuccess && all.length > 0 && !showCalendar && (
                 <>
                     {upcoming.length > 0 ? (
-                        <DutyList title="Upcoming" duties={upcoming} />
+                        <DutyList title="Upcoming" duties={upcoming} linkedId={linkedId} />
                     ) : (
                         <p className="mt-6 rounded-card bg-white px-4 py-4 text-base text-stone-600 ring-1 ring-stone-200">
                             No upcoming duties.
                         </p>
                     )}
-                    {past.length > 0 && <DutyList title="Past" duties={past} ended />}
+                    {past.length > 0 && (
+                        <DutyList title="Past" duties={past} ended linkedId={linkedId} />
+                    )}
                     {cancelled.length > 0 && (
-                        <details className="group mt-8 border-t border-stone-200 pt-4">
+                        <details
+                            className="group mt-8 border-t border-stone-200 pt-4"
+                            open={linked?.cancelled || undefined}
+                        >
                             <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-control text-base font-semibold text-stone-700 [&::-webkit-details-marker]:hidden">
                                 <span>
                                     Cancelled{' '}
@@ -329,7 +372,11 @@ export function MyAssignments() {
                             </p>
                             <ul className="mt-3 grid gap-3 lg:grid-cols-2">
                                 {cancelled.map((duty) => (
-                                    <DutyCard key={duty.id} duty={duty} />
+                                    <DutyCard
+                                        key={duty.id}
+                                        duty={duty}
+                                        linked={duty.id === linkedId}
+                                    />
                                 ))}
                             </ul>
                         </details>

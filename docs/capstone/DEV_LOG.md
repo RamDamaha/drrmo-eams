@@ -216,3 +216,10 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Decision and why: if the 1 hour reminder is already due, the evening one is skipped, so a person assigned late is not sent two emails at once
 - Evidence: tests/Feature/Notifications/AssignmentEmailTest.php
 - Paper: Chapter 3 (system design)
+
+## 2026-11-09 · S3.4 Email link opens the assignment (events)
+- What was built: the link in assignment and reminder emails (`/?assignment=<id>`) now works. My duties scrolls to that duty and gives its card a maroon ring. A duty from a cancelled event opens the Cancelled section first
+- Decision and why: the page only looks the id up in the person's own duties, so no new endpoint is needed and nobody can see another person's duty. An unknown id shows "That duty is not in your list"
+- Decision and why: a link always shows the list, not the calendar, because the card is found in the list
+- Evidence: resources/js/features/events/dutyLink.test.ts
+- Paper: Chapter 3 (user interface design)
