@@ -54,16 +54,17 @@ it('sends the email with a link and marks the row sent', function () {
     {
         public function __construct(public array &$sent) {}
 
-        public function send(string $toEmail, string $toName, string $subject, string $body): void
+        public function send(string $toEmail, string $toName, string $subject, string $body, ?string $html = null): void
         {
-            $this->sent[] = [$toEmail, $body];
+            $this->sent[] = [$toEmail, $body, $html];
         }
     });
 
     SendNotificationEmail::dispatchSync($n);
 
     expect($n->fresh()->status)->toBe('sent')->and($n->fresh()->attempts)->toBe(1)
-        ->and($sent[0][0])->toBe('mara@example.test')->and($sent[0][1])->toContain('?assignment='.$a->id);
+        ->and($sent[0][0])->toBe('mara@example.test')->and($sent[0][1])->toContain('?assignment='.$a->id)
+        ->and($sent[0][2])->toContain('You have a new duty')->toContain('?assignment='.$a->id)->toContain('cid:zppsu-logo');
 });
 
 it('marks the notification failed after the job gives up', function () {

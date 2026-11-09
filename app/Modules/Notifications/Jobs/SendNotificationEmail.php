@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Notifications\Jobs;
 
+use App\Modules\Notifications\Contracts\EmailMessage;
 use App\Modules\Notifications\Contracts\MailSender;
 use App\Modules\Notifications\Enums\NotificationType;
 use App\Modules\Notifications\Models\Notification;
+use Carbon\CarbonInterface;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -19,6 +21,9 @@ class SendNotificationEmail implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    /** Times are stored in UTC and shown in Manila time (PROJECT_PLAN A8). */
+    private const TIMEZONE = 'Asia/Manila';
+
     public int $tries = 3;
 
     /** @var list<int> */
@@ -28,14 +33,14 @@ class SendNotificationEmail implements ShouldQueue
 
     public function handle(MailSender $mail): void
     {
-        $n = $this->notification->loadMissing(['user', 'assignment.event', 'assignment.requirement', 'assignment.dutyType']);
+        $n = $this->notification->loadMissing(['user', 'assignment.event.location', 'assignment.requirement', 'assignment.dutyType']);
         if ($n->status === 'sent' || $n->user === null) {
             return;
         }
 
         $n->increment('attempts');
-        [$subject, $body] = $this->compose($n);
-        $mail->send($n->user->email, $n->user->name, $subject, $body);
+        $message = $this->compose($n);
+        $mail->send($n->user->email, $n->user->name, $message->subject, $message->text(), $message->html());
         $n->update(['status' => 'sent', 'sent_at' => now(), 'last_error' => null]);
     }
 
@@ -44,24 +49,49 @@ class SendNotificationEmail implements ShouldQueue
         $this->notification->update(['status' => 'failed', 'last_error' => mb_substr($e->getMessage(), 0, 500)]);
     }
 
-    /** @return array{string, string} */
-    private function compose(Notification $n): array
+    private function compose(Notification $n): EmailMessage
     {
         $a = $n->assignment;
         $event = $a?->event?->title ?? 'an event';
-        $duty = $a?->dutyType?->name ?? 'a duty';
-        $when = $a?->requirement?->shift_starts_at->format('M j, Y g:i A') ?? 'to be confirmed';
         $link = url('/').'?assignment='.($a?->id ?? '');
 
-        $verb = match ($n->type) {
-            NotificationType::AssignmentCreated->value => ['New duty assignment', 'You have been assigned to a duty.'],
-            NotificationType::AssignmentChanged->value => ['Duty assignment changed', 'Your duty assignment was changed.'],
-            default => ['Duty assignment cancelled', 'Your duty assignment was cancelled.'],
+        [$subject, $heading, $intro, $preheader] = match ($n->type) {
+            NotificationType::AssignmentCreated->value => ['New duty assignment', 'You have a new duty', 'You have been assigned to a duty. Please check the details below.', 'You have been assigned to a duty at '.$event.'.'],
+            NotificationType::AssignmentChanged->value => ['Duty assignment changed', 'Your duty was changed', 'Your duty assignment was changed. These are the new details.', 'Your duty at '.$event.' was changed.'],
+            default => ['Duty assignment cancelled', 'Your duty was cancelled', 'Your duty assignment was cancelled. You do not need to report for it.', 'Your duty at '.$event.' was cancelled.'],
         };
-        $reason = $n->type === NotificationType::AssignmentCancelled->value && $a?->cancel_reason ? "\nReason: {$a->cancel_reason}" : '';
 
-        $body = "Hello {$n->user?->first_name},\n\n{$verb[1]}\n\nEvent: {$event}\nDuty: {$duty}\nShift: {$when}{$reason}\n\nOpen it here: {$link}\n\nZPPSU DRRMO";
+        $message = EmailMessage::make($subject.': '.$event, $heading)
+            ->preheader($preheader)
+            ->greeting($n->user?->first_name ?? 'there')
+            ->line($intro)
+            ->details([
+                'Event' => $event,
+                'Duty' => $a?->dutyType?->name ?? 'a duty',
+                'Where' => $a?->event?->location?->name ?? 'See the app',
+                'Shift' => $this->shift($a?->requirement?->shift_starts_at, $a?->requirement?->shift_ends_at),
+            ]);
 
-        return [$verb[0].': '.$event, $body];
+        if ($n->type === NotificationType::AssignmentCancelled->value && $a?->cancel_reason) {
+            $message->notice('Reason', $a->cancel_reason);
+        }
+
+        return $message->button($n->type === NotificationType::AssignmentCancelled->value ? 'Open DRRMO EAMS' : 'View my duty', $link);
+    }
+
+    private function shift(?CarbonInterface $start, ?CarbonInterface $end): string
+    {
+        if ($start === null) {
+            return 'To be confirmed';
+        }
+
+        $start = $start->copy()->setTimezone(self::TIMEZONE);
+        $text = $start->format('D, M j, Y, g:i A');
+        if ($end !== null) {
+            $end = $end->copy()->setTimezone(self::TIMEZONE);
+            $text .= ' to '.($end->isSameDay($start) ? $end->format('g:i A') : $end->format('D, M j, g:i A'));
+        }
+
+        return $text;
     }
 }

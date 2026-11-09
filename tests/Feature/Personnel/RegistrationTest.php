@@ -302,3 +302,11 @@ it('returns the names in /api/me', function () {
         ->assertJsonPath('data.last_name', 'Reyes')
         ->assertJsonPath('data.name', 'Ana Reyes');
 });
+
+it('sends the confirmation code as a branded HTML email with a plain text fallback', function () {
+    signUp()->assertStatus(202);
+
+    $sent = end($this->mail->sent);
+    expect($sent['html'])->toContain('Confirm your email')->toContain($this->mail->lastCode())
+        ->and($sent['body'])->toContain('Your confirmation code is '.$this->mail->lastCode());
+});

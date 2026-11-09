@@ -23,4 +23,9 @@ class NotificationsServiceProvider extends ServiceProvider
             return $logOnly ? new LogMailSender : new PhpMailerSender;
         });
     }
+
+    public function boot(): void
+    {
+        $this->loadViewsFrom(__DIR__.'/Views', 'notifications');
+    }
 }

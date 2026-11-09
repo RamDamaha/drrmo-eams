@@ -200,3 +200,12 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Problem met and fix: the `users` table has no recipient link in the old `notifications` plan, so the table follows DATABASE.md G7 (`user_id`, `attempts`, `last_error`, nullable `assignment_id`)
 - Evidence: tests/Feature/Notifications/AssignmentEmailTest.php
 - Paper: Chapter 3 (system design), Chapter 4 (reliability of email delivery)
+
+## 2026-11-09 · Branded HTML emails (notifications)
+- What was built: one shared email layout for all seven emails the system sends (confirmation code, access approved, access rejected, password reset, duty assigned, duty changed, duty cancelled). Each email now goes out as HTML with a plain text part
+- Decision and why: content is built with a small `EmailMessage` class (heading, lines, code, button, details, notice) and rendered by one Blade view, so every email looks the same and other modules never write HTML
+- Decision and why: tables and inline styles, because mail apps ignore most modern CSS. Logos are embedded in the message (cid), so they show even when remote images are blocked
+- Decision and why: `MailSender::send` takes an optional `$html`, so the old plain text calls still work
+- Problem met and fix: shift times were printed in UTC. They are now shown in Asia/Manila, as PROJECT_PLAN A8 says
+- Evidence: tests/Feature/Notifications/EmailMessageTest.php, AssignmentEmailTest.php, RegistrationTest.php
+- Paper: Chapter 3 (system design, interface design)

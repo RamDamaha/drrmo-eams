@@ -6,6 +6,7 @@ namespace App\Modules\Personnel\Actions;
 
 use App\Modules\Access\Enums\Role as RoleCode;
 use App\Modules\Access\Models\Role;
+use App\Modules\Notifications\Contracts\EmailMessage;
 use App\Modules\Notifications\Contracts\MailSender;
 use App\Modules\Personnel\Enums\AccountStatus;
 use App\Modules\Personnel\Models\User;
@@ -128,11 +129,11 @@ class RegistrationService
         ])->save();
 
         $this->audit->log('registration.approved', $user);
-        $this->notify(
-            $user,
-            'Your DRRMO EAMS access was approved',
-            "Hello {$user->name},\n\nThe DRRMO office approved your request. You can now sign in with your email and password.\n\nZPPSU DRRMO",
-        );
+        $this->notify($user, EmailMessage::make('Your DRRMO EAMS access was approved', 'Your access was approved')
+            ->preheader('You can now sign in to DRRMO EAMS.')
+            ->greeting($user->name)
+            ->line('The DRRMO office approved your request. You can now sign in with your email and password.')
+            ->button('Sign in', url('/login')));
     }
 
     /** Admin rejects with a reason. The reason is kept, audited and sent to the person. */
@@ -146,11 +147,12 @@ class RegistrationService
         ])->save();
 
         $this->audit->log('registration.rejected', $user, null, ['reason' => $reason]);
-        $this->notify(
-            $user,
-            'Your DRRMO EAMS access request',
-            "Hello {$user->name},\n\nThe DRRMO office could not approve your request.\nReason: {$reason}\n\nIf this is a mistake, please contact the DRRMO office.\n\nZPPSU DRRMO",
-        );
+        $this->notify($user, EmailMessage::make('Your DRRMO EAMS access request', 'Your request was not approved')
+            ->preheader('The DRRMO office could not approve your request.')
+            ->greeting($user->name)
+            ->line('The DRRMO office could not approve your request for DRRMO EAMS access.')
+            ->notice('Reason', $reason)
+            ->line('If you think this is a mistake, please contact the DRRMO office.'));
     }
 
     private function sendCode(User $user): void
@@ -164,18 +166,20 @@ class RegistrationService
             'verification_sent_at' => now(),
         ])->save();
 
-        $this->notify(
-            $user,
-            'Your DRRMO EAMS confirmation code',
-            "Hello {$user->name},\n\nYour confirmation code is {$code}\n\nIt works for ".self::CODE_MINUTES." minutes. If you did not ask for access, ignore this email.\n\nZPPSU DRRMO",
-        );
+        $minutes = self::CODE_MINUTES;
+        $this->notify($user, EmailMessage::make('Your DRRMO EAMS confirmation code', 'Confirm your email')
+            ->preheader("Your code is {$code}. It works for {$minutes} minutes.")
+            ->greeting($user->name)
+            ->line('Enter this code on the DRRMO EAMS screen to confirm your email.')
+            ->code('Your confirmation code', $code)
+            ->line("It works for {$minutes} minutes. If you did not ask for access, you can ignore this email."));
     }
 
     /** A mail failure must not break the request or reveal anything. The person can ask for a new code. */
-    private function notify(User $user, string $subject, string $body): void
+    private function notify(User $user, EmailMessage $message): void
     {
         try {
-            $this->mail->send($user->email, $user->name, $subject, $body);
+            $this->mail->send($user->email, $user->name, $message->subject, $message->text(), $message->html());
         } catch (Throwable $e) {
             Log::error('Registration email failed: '.$e->getMessage(), ['user_id' => $user->getKey()]);
         }
