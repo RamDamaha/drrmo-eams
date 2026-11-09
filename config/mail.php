@@ -125,6 +125,9 @@ return [
     |
     */
 
+    // Admins see today's sends against this number in the notification log.
+    'daily_limit' => (int) env('MAIL_DAILY_LIMIT', 300),
+
     'from' => [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),

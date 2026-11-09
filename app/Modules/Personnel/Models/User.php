@@ -6,6 +6,7 @@ namespace App\Modules\Personnel\Models;
 
 use App\Modules\Access\Enums\Role as RoleCode;
 use App\Modules\Access\Models\Role;
+use App\Modules\Notifications\Contracts\EmailMessage;
 use App\Modules\Notifications\Contracts\MailSender;
 use App\Modules\Personnel\Enums\AccountStatus;
 use App\Modules\Personnel\Enums\AvailabilityStatus;
@@ -86,15 +87,14 @@ class User extends Authenticatable
     public function sendPasswordResetNotification($token): void
     {
         $minutes = (int) config('auth.passwords.users.expire');
+        $message = EmailMessage::make('Reset your DRRMO EAMS password', 'Reset your password')
+            ->preheader("Choose a new password. The link works for {$minutes} minutes.")
+            ->greeting($this->name)
+            ->line('Someone asked to reset the password of this account. Use the button to choose a new password.')
+            ->button('Choose a new password', $this->passwordResetUrl((string) $token))
+            ->line("The link works for {$minutes} minutes and only once. If you did not ask for this, ignore this email. Your password stays the same.");
 
-        app(MailSender::class)->send(
-            $this->email,
-            $this->name,
-            'Reset your DRRMO EAMS password',
-            "Hello {$this->name},\n\nSomeone asked to reset the password of this account. Open this link to choose a new password:\n\n"
-            .$this->passwordResetUrl((string) $token)
-            ."\n\nThe link works for {$minutes} minutes and only once. If you did not ask for this, ignore this email. Your password stays the same.\n\nZPPSU DRRMO",
-        );
+        app(MailSender::class)->send($this->email, $this->name, $message->subject, $message->text(), $message->html());
     }
 
     /** @return BelongsTo<Role, $this> */

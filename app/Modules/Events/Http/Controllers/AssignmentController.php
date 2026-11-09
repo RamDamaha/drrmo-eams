@@ -12,6 +12,7 @@ use App\Modules\Events\Http\Resources\AssignmentResource;
 use App\Modules\Events\Models\Assignment;
 use App\Modules\Events\Models\DutyRequirement;
 use App\Modules\Events\Models\Event;
+use App\Modules\Notifications\Contracts\AssignmentNotifier;
 use App\Modules\Personnel\Models\User;
 use App\Modules\Records\Contracts\AuditLogger;
 use Illuminate\Http\JsonResponse;
@@ -43,7 +44,7 @@ class AssignmentController
         ])->values()]);
     }
 
-    public function store(StoreAssignmentRequest $request, DutyRequirement $requirement, AuditLogger $audit): JsonResponse
+    public function store(StoreAssignmentRequest $request, DutyRequirement $requirement, AuditLogger $audit, AssignmentNotifier $notifier): JsonResponse
     {
         /** @var User $actor */
         $actor = $request->user();
@@ -73,11 +74,13 @@ class AssignmentController
             'override_reason' => $override,
         ]));
 
+        $notifier->created($assignment);
+
         return (new AssignmentResource($assignment->load(['user.role', 'dutyType'])))->response()->setStatusCode(201);
     }
 
     /** Moves a person to another duty of the same event. */
-    public function update(UpdateAssignmentRequest $request, Assignment $assignment, AuditLogger $audit): AssignmentResource
+    public function update(UpdateAssignmentRequest $request, Assignment $assignment, AuditLogger $audit, AssignmentNotifier $notifier): AssignmentResource
     {
         abort_unless(in_array($assignment->status, [AssignmentStatus::Assigned, AssignmentStatus::Acknowledged], true), 422, 'Only an assignment that has not started can be changed.');
 
@@ -97,12 +100,13 @@ class AssignmentController
             'after' => ['requirement_id' => $target->id, 'duty_type_id' => $target->duty_type_id],
             'override_reason' => $override,
         ]));
+        $notifier->changed($assignment);
 
         return new AssignmentResource($assignment->load(['user.role', 'dutyType']));
     }
 
     /** Cancels a duty for one person. The row stays so history is kept. */
-    public function cancel(CancelAssignmentRequest $request, Assignment $assignment, AuditLogger $audit): AssignmentResource
+    public function cancel(CancelAssignmentRequest $request, Assignment $assignment, AuditLogger $audit, AssignmentNotifier $notifier): AssignmentResource
     {
         abort_unless(in_array($assignment->status, [AssignmentStatus::Assigned, AssignmentStatus::Acknowledged], true), 422, 'Only an assignment that has not started can be cancelled.');
 
@@ -119,6 +123,7 @@ class AssignmentController
             'after' => ['status' => 'cancelled'],
             'reason' => $request->validated('reason'),
         ]);
+        $notifier->cancelled($assignment);
 
         return new AssignmentResource($assignment->load(['user.role', 'dutyType']));
     }

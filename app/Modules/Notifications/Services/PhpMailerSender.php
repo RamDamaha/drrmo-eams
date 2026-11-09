@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Modules\Notifications\Services;
 
+use App\Modules\Notifications\Contracts\EmailMessage;
 use App\Modules\Notifications\Contracts\MailSender;
 use PHPMailer\PHPMailer\PHPMailer;
 
 /** Sends through SMTP with PHPMailer. Settings come from config/mail.php (MAIL_* in .env). */
 class PhpMailerSender implements MailSender
 {
-    public function send(string $toEmail, string $toName, string $subject, string $body): void
+    public function send(string $toEmail, string $toName, string $subject, string $body, ?string $html = null): void
     {
         $mail = new PHPMailer(true);
         $mail->isSMTP();
@@ -37,8 +38,23 @@ class PhpMailerSender implements MailSender
         $mail->setFrom((string) config('mail.from.address'), (string) config('mail.from.name'));
         $mail->addAddress($toEmail, $toName);
         $mail->Subject = $subject;
-        $mail->Body = $body;
-        $mail->isHTML(false);
+
+        if ($html === null) {
+            $mail->isHTML(false);
+            $mail->Body = $body;
+        } else {
+            // HTML with the plain text as the fallback part. Logos travel inside the message,
+            // so they show even when the mail app blocks remote images.
+            $mail->isHTML(true);
+            $mail->Body = $html;
+            $mail->AltBody = $body;
+            foreach (EmailMessage::LOGOS as $cid => $path) {
+                if (str_contains($html, "cid:{$cid}") && is_file(public_path($path))) {
+                    $mail->addEmbeddedImage(public_path($path), $cid, basename($path), PHPMailer::ENCODING_BASE64, 'image/png');
+                }
+            }
+        }
+
         $mail->send();
     }
 }

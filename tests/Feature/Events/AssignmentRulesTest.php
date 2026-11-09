@@ -301,3 +301,33 @@ it('gives the admin events inside a date range for the calendar', function () {
         ->and($response->json('data.0.places_needed'))->toBe(3);
     withAuthCookies(loginCookies($marshal))->getJson('/api/events/calendar?from=2026-12-01&to=2027-01-01')->assertForbidden();
 });
+
+it('blocks moving an inactive person, an overlapping shift, and a full duty without a reason', function () {
+    $admin = User::factory()->role(RoleCode::Admin)->create();
+    [$a, $b] = User::factory()->role(RoleCode::Marshal)->count(2)->create()->all();
+    $event = Event::factory()->create();
+    $one = $event->requirements()->create(shift($event));
+    $full = $event->requirements()->create(shift($event));
+    assignTo($full, $b);
+    $assignment = assignTo($one, $a);
+    $cookies = loginCookies($admin);
+    $url = "/api/assignments/{$assignment->id}";
+
+    withAuthCookies($cookies)->patchJson($url, ['requirement_id' => $full->id])->assertUnprocessable()->assertJsonValidationErrors(['override_reason']);
+    withAuthCookies($cookies)->patchJson($url, ['requirement_id' => $full->id, 'override_reason' => 'Extra hands needed at the gate'])->assertOk();
+    expect($assignment->fresh()->override_reason)->toBe('Extra hands needed at the gate');
+
+    $other = Event::factory()->create(['starts_at' => $event->starts_at->copy()->addHour(), 'ends_at' => $event->ends_at->copy()->addHour()]);
+    $otherReq = $other->requirements()->create(shift($other));
+    $second = $other->requirements()->create(shift($other, ['headcount' => 3]));
+    $mine = assignTo($otherReq, $a);
+    // $a still holds a duty in the first event, which overlaps this one, so the move is blocked.
+    withAuthCookies($cookies)->patchJson("/api/assignments/{$mine->id}", ['requirement_id' => $second->id])
+        ->assertUnprocessable()->assertJsonValidationErrors(['requirement_id']);
+    $assignment->update(['status' => 'cancelled']);
+    withAuthCookies($cookies)->patchJson("/api/assignments/{$mine->id}", ['requirement_id' => $second->id])->assertOk();
+
+    $a->forceFill(['account_status' => 'pending_approval'])->save();
+    withAuthCookies($cookies)->patchJson("/api/assignments/{$mine->id}", ['requirement_id' => $otherReq->id])
+        ->assertUnprocessable()->assertJsonValidationErrors(['requirement_id']);
+});

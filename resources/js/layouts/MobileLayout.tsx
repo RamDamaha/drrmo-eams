@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink, Outlet } from 'react-router';
+import { useAlerts } from '@/features/notifications/unread';
 import { SignOutButton } from '@/app/SignOutButton';
 import { BrandLogos } from '@/shared/ui/BrandLogos';
 
@@ -52,6 +53,16 @@ const tabs = [
         ),
     },
     {
+        to: '/me/notifications',
+        label: 'Alerts',
+        icon: (
+            <TabIcon>
+                <path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z" />
+                <path d="M10 20a2 2 0 0 0 4 0" />
+            </TabIcon>
+        ),
+    },
+    {
         to: '/me/profile',
         label: 'Me',
         icon: (
@@ -85,6 +96,15 @@ function useOnline() {
 // and the content gets a wider column, so marshals and volunteers can use a desktop too.
 export function MobileLayout() {
     const online = useOnline();
+    const { unread } = useAlerts();
+    // The dot sits on the bell's top right corner. A white ring cuts it out of the icon.
+    const dot = (to: string, place: string) =>
+        unread && to === '/me/notifications' ? (
+            <span
+                className={`absolute size-2.5 rounded-full bg-red-600 ring-2 ring-white ${place}`}
+                aria-hidden="true"
+            />
+        ) : null;
 
     return (
         <div className="min-h-dvh bg-stone-50">
@@ -107,8 +127,14 @@ export function MobileLayout() {
                                             `flex h-full items-center gap-2 border-b-2 px-3 text-sm transition-colors [&_svg]:size-5 ${isActive ? 'border-maroon-700 font-semibold text-maroon-700' : 'border-transparent font-medium text-stone-600 hover:border-stone-300 hover:text-stone-900'}`
                                         }
                                     >
-                                        {tab.icon}
+                                        <span className="relative">
+                                            {tab.icon}
+                                            {dot(tab.to, '-top-0.5 -right-0.5')}
+                                        </span>
                                         {tab.label}
+                                        {unread && tab.to === '/me/notifications' && (
+                                            <span className="sr-only"> (new)</span>
+                                        )}
                                     </NavLink>
                                 </li>
                             ))}
@@ -138,7 +164,7 @@ export function MobileLayout() {
                 aria-label="Main"
                 className="fixed inset-x-0 bottom-0 z-20 border-t border-stone-200 bg-white pb-[env(safe-area-inset-bottom)] md:hidden"
             >
-                <div className="mx-auto grid max-w-2xl grid-cols-4 px-2">
+                <div className="mx-auto grid max-w-2xl grid-cols-5 px-2">
                     {tabs.map((tab) => (
                         <NavLink
                             key={tab.to}
@@ -151,11 +177,15 @@ export function MobileLayout() {
                             {({ isActive }) => (
                                 <>
                                     <span
-                                        className={`flex h-8 w-14 items-center justify-center rounded-full transition-colors ${isActive ? 'bg-maroon-100' : 'group-hover:bg-stone-100'}`}
+                                        className={`relative flex h-8 w-14 items-center justify-center rounded-full transition-colors ${isActive ? 'bg-maroon-100' : 'group-hover:bg-stone-100'}`}
                                     >
                                         {tab.icon}
+                                        {dot(tab.to, 'top-0.5 left-1/2 ml-1')}
                                     </span>
                                     {tab.label}
+                                    {unread && tab.to === '/me/notifications' && (
+                                        <span className="sr-only"> (new)</span>
+                                    )}
                                 </>
                             )}
                         </NavLink>

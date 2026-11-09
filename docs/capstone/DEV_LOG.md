@@ -192,3 +192,34 @@ One entry per merged story. Format in ../DOCUMENTATION_GUIDE.md section 4.
 - Decision and why: the lists use container queries. In a narrow list the time and actions drop under the name, so names are no longer cut to one letter in the right column. Mark no show is a 40 px outlined button on phones
 - Problem met and fix: the page scrolled sideways on phones because the grid had no column size. `grid-cols-1` and `min-w-0` fixed it
 - Paper: Chapter 3 (user interface design)
+
+## 2026-11-09 · S3.4 Email on assignment created, changed, cancelled (notifications)
+- What was built: the `notifications` table (migration 500001), the `Notification` model, the `AssignmentNotifier` contract and a queued `SendNotificationEmail` job. `AssignmentController` calls the contract after create, move and cancel. Each call queues one notification row and one email with a link that opens the app on the person's duties
+- Decision and why: the job retries 3 times (30 s, then 2 min apart). When it gives up, the row is marked `failed` with the last error, so the S3.6 log can show it and offer Retry
+- Decision and why: Events reaches Notifications only through the `AssignmentNotifier` contract, as MODULES.md requires. Notifications owns the table and the email text
+- Problem met and fix: the `users` table has no recipient link in the old `notifications` plan, so the table follows DATABASE.md G7 (`user_id`, `attempts`, `last_error`, nullable `assignment_id`)
+- Evidence: tests/Feature/Notifications/AssignmentEmailTest.php
+- Paper: Chapter 3 (system design), Chapter 4 (reliability of email delivery)
+
+## 2026-11-09 · Branded HTML emails (notifications)
+- What was built: one shared email layout for all seven emails the system sends (confirmation code, access approved, access rejected, password reset, duty assigned, duty changed, duty cancelled). Each email now goes out as HTML with a plain text part
+- Decision and why: content is built with a small `EmailMessage` class (heading, lines, code, button, details, notice) and rendered by one Blade view, so every email looks the same and other modules never write HTML
+- Decision and why: tables and inline styles, because mail apps ignore most modern CSS. Logos are embedded in the message (cid), so they show even when remote images are blocked
+- Decision and why: `MailSender::send` takes an optional `$html`, so the old plain text calls still work
+- Problem met and fix: shift times were printed in UTC. They are now shown in Asia/Manila, as PROJECT_PLAN A8 says
+- Evidence: tests/Feature/Notifications/EmailMessageTest.php, AssignmentEmailTest.php, RegistrationTest.php
+- Paper: Chapter 3 (system design, interface design)
+
+## 2026-11-09 · S3.5 Shift reminders (notifications)
+- What was built: the `notifications:send-reminders` command, scheduled every five minutes. It queues an email at 6:00 PM Manila time the evening before a shift and another 1 hour before it starts
+- Decision and why: each assignment gets each reminder once, because the command looks for an existing notification row of that type first. Cancelled, no show and ended assignments, cancelled events and disabled people never get one
+- Decision and why: if the 1 hour reminder is already due, the evening one is skipped, so a person assigned late is not sent two emails at once
+- Evidence: tests/Feature/Notifications/AssignmentEmailTest.php
+- Paper: Chapter 3 (system design)
+
+## 2026-11-09 · S3.4 Email link opens the assignment (events)
+- What was built: the link in assignment and reminder emails (`/?assignment=<id>`) now works. My duties scrolls to that duty and gives its card a maroon ring. A duty from a cancelled event opens the Cancelled section first
+- Decision and why: the page only looks the id up in the person's own duties, so no new endpoint is needed and nobody can see another person's duty. An unknown id shows "That duty is not in your list"
+- Decision and why: a link always shows the list, not the calendar, because the card is found in the list
+- Evidence: resources/js/features/events/dutyLink.test.ts
+- Paper: Chapter 3 (user interface design)

@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Modules\Events\Http\Controllers;
 
+use App\Modules\Events\Enums\AssignmentStatus;
 use App\Modules\Events\Enums\EventStatus;
 use App\Modules\Events\Http\Requests\StoreEventRequest;
 use App\Modules\Events\Http\Requests\UpdateEventRequest;
 use App\Modules\Events\Http\Resources\EventResource;
+use App\Modules\Events\Models\Assignment;
 use App\Modules\Events\Models\Event;
+use App\Modules\Notifications\Contracts\AssignmentNotifier;
 use App\Modules\Personnel\Models\User;
 use App\Modules\Records\Contracts\AuditLogger;
 use BackedEnum;
@@ -80,13 +83,17 @@ class EventController
         return new EventResource($event->load('location'));
     }
 
-    public function cancel(Event $event, AuditLogger $audit): EventResource
+    public function cancel(Event $event, AuditLogger $audit, AssignmentNotifier $notifier): EventResource
     {
         Gate::authorize('create', Event::class);
         abort_unless(in_array($event->status, [EventStatus::Draft, EventStatus::Published], true), 422, 'This event cannot be cancelled.');
 
         $event->update(['status' => EventStatus::Cancelled]);
         $audit->log('event.cancelled', $event);
+        // Everyone still expected on duty hears about it once.
+        Assignment::query()->where('event_id', $event->id)
+            ->whereIn('status', [AssignmentStatus::Assigned->value, AssignmentStatus::Acknowledged->value])
+            ->each(fn (Assignment $a) => $notifier->cancelled($a));
 
         return new EventResource($event->load('location'));
     }
